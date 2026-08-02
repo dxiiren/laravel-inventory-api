@@ -89,8 +89,25 @@ fresh: _require-php
 
 # ─── Quality ─────────────────────────────────────────────
 
-# Run the test suite. Extra args pass through: just test --filter=Something
+# Runs in parallel (paratest). Six processes, not one per core: every process
+# pays a full framework boot and its own migration run, so past six that fixed
+# cost grows faster than the shared work shrinks. Measured here, median of 3:
+# serial 7.9s, -p 6 5.7s. Same 64 tests / 374 assertions either way.
+# Safe to parallelize because phpunit.xml pins DB_DATABASE to :memory:, so each
+# process gets a private database. Note .env.testing points DB_DATABASE at the
+# shared file database/testing.sqlite — that would be a corruption hazard here,
+# but phpunit's <env> is set before Laravel's immutable Dotenv load and wins.
+# Verified: testing.sqlite's mtime and size are untouched by a full run. If you
+# ever move the DB config out of phpunit.xml, re-check that before trusting -p.
+# Extra args pass through: just test --filter=Something
+# Run the test suite (parallel)
 test *flags: _require-php
+    & '{{php}}' artisan test --parallel --processes=6 {{flags}}
+
+# Parallel output interleaves and hides which case emitted what, so reach for
+# this when a failure needs reading rather than just counting.
+# Run the test suite serially — for debugging a failure
+test-serial *flags: _require-php
     & '{{php}}' artisan test {{flags}}
 
 # Check code style with Laravel Pint (read-only; fix with: just lint-fix)

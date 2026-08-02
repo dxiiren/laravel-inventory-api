@@ -38,13 +38,23 @@ just lint          # confirm green
 ### 2 — Test suite (PHPUnit via artisan)
 
 ```powershell
-just test          # php artisan test
+just test          # php artisan test --parallel --processes=6
 ```
 
 Pass = all tests green, exit 0. Filter a single test with
-`just test --filter=SomethingTest`. Tests run against `phpunit.xml` + `.env.testing`
-(sqlite at `database/testing.sqlite`, sync queue, array cache/session — they do not
-touch the dev `database/database.sqlite`).
+`just test --filter=SomethingTest`. Tests run against `phpunit.xml` (sqlite at
+`:memory:`, sync queue, array cache/session), so they touch neither the dev
+`database/database.sqlite` nor `database/testing.sqlite`.
+
+`.env.testing` does name `database/testing.sqlite`, but it never takes effect
+here: phpunit's `<env>` entries are set before Laravel's immutable Dotenv load,
+so `:memory:` wins. Verified — `testing.sqlite`'s mtime and size are unchanged
+by a full run. This matters, because `:memory:` is what makes the parallel run
+safe: each process gets a private database instead of sharing one file.
+
+`just test` runs in parallel, so its output interleaves and the summary line
+reads `OK (64 tests, 374 assertions)` rather than `Tests: 64 passed`. When a
+failure needs reading rather than counting, use `just test-serial`.
 
 ---
 
@@ -55,7 +65,7 @@ Report a per-layer table, then an overall verdict:
 ```
 LAYER   TOOL             STATUS
 style   pint --test      PASS | FAIL (N files)  [auto-fixed → re-checked green]
-test    php artisan test PASS | FAIL (N failures)
+test    artisan test -p 6  PASS | FAIL (N failures)
 OVERALL: PASS | FAIL
 ```
 

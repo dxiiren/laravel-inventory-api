@@ -44,10 +44,10 @@ laravel-inventory-api/
     product.graphql                    # Product type + ProductColumn enum + filter input
     user.graphql                       # User type + UserColumn enum
   public/                              # index.php + built assets (public/build, git-ignored)
-  resources/                           # welcome.blade.php + Vite inputs (css/js)
+  resources/                           # welcome.blade.php (API landing page, inline CSS) + Vite inputs (css/js)
   routes/
     api.php                            # /api/products CRUD + import, /api/imports/{id} (ApiDataResponse group)
-    web.php                            # GET / → welcome
+    web.php                            # GET / → the API landing page
   storage/                             # runtime files; uploads land in app/private/products
   tests/
     Feature/ProductTest.php            # REST + import dispatch (Queue::fake, Excel::fake)

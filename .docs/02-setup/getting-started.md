@@ -37,8 +37,8 @@ just bootstrap
 
 This: creates `.env` from `.env.example` **switched to sqlite** (the committed example
 defaults to MySQL), creates an empty `database/database.sqlite`, runs `composer install`,
-`npm install`, `npm run build` (Vite — without it every page 500s on a missing manifest),
-generates the app key, and migrates.
+`npm install`, `npm run build` (Vite — kept for parity; no page depends on the built
+assets anymore, the landing page is self-contained), generates the app key, and migrates.
 
 ## Step 3 — Run
 

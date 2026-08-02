@@ -9,7 +9,8 @@
 ## What it is
 
 A small, complete Laravel 12 **API** built around one domain: **products and their stock
-quantities**. There is no UI beyond the stock welcome page — the interesting parts are the
+quantities**. There is no UI beyond an API landing page at `/` (an endpoint table linking
+to the README examples and the `vue-inventory-ui` frontend) — the interesting parts are the
 repository/DTO layering, the dual REST + GraphQL surface, and the chunked, queued Excel
 import pipeline.
 
@@ -17,7 +18,7 @@ import pipeline.
 
 | Feature | Where |
 | --- | --- |
-| Welcome page (stock Laravel 12) | `GET /` |
+| API landing page (endpoint table, self-contained inline CSS) | `GET /` |
 | Product list — paginated (10/page), `?search=` across id/type/brand/model/capacity | `GET /api/products` |
 | Product create / update / delete (via `ProductData` DTO) | `POST/PUT/DELETE /api/products[/{id}]` |
 | Bulk Excel import — `.xlsx` upload (≤5 MB), queued processing, sha256-idempotent | `POST /api/products/import` |

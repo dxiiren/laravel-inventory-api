@@ -5,7 +5,8 @@
 
 ## Project: Laravel Inventory API
 
-A Laravel 12 product-inventory API (no UI beyond the stock welcome page): CRUD and search
+A Laravel 12 product-inventory API (no UI beyond a self-contained API landing page at `/`,
+screenshot in `docs/images/api-landing.png`): CRUD and search
 over a `products` table via REST **and** GraphQL (Lighthouse), plus a bulk Excel import —
 POST an `.xlsx` of `product_id`/`status` rows (`sold` = −1, `buy` = +1) and a queued job
 nets the changes per product and upserts the new stock quantities. Companion frontend:
@@ -19,7 +20,7 @@ the sibling `vue-inventory-ui` repo.
 
 | Layer | Technology | Key details |
 | --- | --- | --- |
-| Framework | **Laravel 12** (PHP ^8.2, local PHP 8.4) | API routes in `routes/api.php` under the `ApiDataResponse` envelope middleware; `routes/web.php` only serves the welcome page |
+| Framework | **Laravel 12** (PHP ^8.2, local PHP 8.4) | API routes in `routes/api.php` under the `ApiDataResponse` envelope middleware; `routes/web.php` only serves the API landing page |
 | REST API | Resource controller + repository pattern | `ProductController` → `ProductRepositoryInterface` (bound in `AppServiceProvider`) → `ProductRepository`; DTOs via **spatie/laravel-data** (`ProductData`) |
 | GraphQL | **nuwave/lighthouse 6** at `POST /api/graphql` | Schema split across `graphql/*.graphql` (`#import`); `products`/`users` queries with `@paginate`, `@whereConditions`, `@orderBy`, `@scope(name: "filter")` |
 | Excel import | **maatwebsite/excel 3** (queued) | `POST /api/products/import` (`mimes:xlsx`, `max:5120` KB) stores the file, creates an `Import` record (sha256 hash = idempotency key; duplicates are acknowledged, not re-applied), dispatches `ImportProductsFromExcelJob`; `ProductImport` reads chunks of 100, nets `sold`/`buy` per `product_id`, `upsert`s quantities — unknown ids are skipped and recorded as row-level errors, reported at `GET /api/imports/{id}` |
@@ -28,7 +29,7 @@ the sibling `vue-inventory-ui` repo.
 | Database | **SQLite** locally (`database/database.sqlite`, git-ignored) | `just bootstrap` writes the local `.env` with `DB_CONNECTION=sqlite`; committed `.env.example` stays MySQL (`xlsx_import_backend`, dump at root `xlsx_import_backend.sql`) |
 | Validation | FormRequest + data DTO | `ImportProductRequest` (`file` required, `mimes:xlsx`, `max:5120`), `ProductData` (typed constructor promotion) |
 | API envelope | `ApiDataResponse` middleware | Wraps every JSON response as `{code, message, data, errors}` |
-| Assets | Vite 6 + Tailwind CSS 4 (npm) | Only the welcome page uses them; `just bootstrap` builds once |
+| Assets | Vite 6 + Tailwind CSS 4 (npm) | Stock scaffolding only — the landing page is fully self-contained (inline CSS, no `@vite`); `just bootstrap` still builds once |
 | Tests | PHPUnit 11 via `php artisan test` | `ProductTest` (REST + import dispatch), `ProductGraphqlTest` (incl. REST/GraphQL search parity), `ProductImportTest` (row-level error report + idempotency, real generated xlsx); test env = `phpunit.xml` + `.env.testing` (sqlite `database/testing.sqlite`, sync queue) |
 | Style | Laravel Pint | `just lint` / `just lint-fix` |
 | Task runner | `just` | wraps php/composer/npm (`justfile`); PHP pinned to `%LOCALAPPDATA%\Programs\php-8.4` |
@@ -54,8 +55,8 @@ laravel-inventory-api/
     migrations/             # users/cache/jobs + personal_access_tokens + products + imports
     factories/, seeders/    # ProductFactory, ProductSeeder (5 iPhones) + sample xlsx
   graphql/                  # schema.graphql (+ product/user via #import)
-  resources/                # welcome view + Vite inputs (app.css, app.js)
-  routes/                   # api.php (products CRUD + import + GET imports/{id}), web.php (welcome)
+  resources/                # welcome view (API landing page, inline CSS) + Vite inputs (app.css, app.js)
+  routes/                   # api.php (products CRUD + import + GET imports/{id}), web.php (landing page)
   tests/                    # ProductTest, ProductGraphqlTest, ProductImportTest + stock examples
   xlsx_import_backend.sql   # MySQL dump matching .env.example defaults (optional)
   justfile, setup.ps1       # dev recipes + one-time machine setup

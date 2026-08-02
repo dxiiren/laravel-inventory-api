@@ -6,10 +6,12 @@ A Laravel 12 product-inventory API: CRUD and search over a `products` table via 
 per product and upserts the new stock quantities. Every import run is recorded: row-level
 errors are reported at `GET /api/imports/{id}`, and re-uploading an identical file is
 ignored (sha256 idempotency key). Backend for the companion `vue-inventory-ui`
-frontend; the only page it serves itself is the stock welcome page.
+frontend; the only page it serves itself is an API landing page mapping every endpoint.
 
 **Frontend:** the Vue UI half of this system lives at
 [dxiiren/vue-inventory-ui](https://github.com/dxiiren/vue-inventory-ui).
+
+![API landing page at / — REST, GraphQL and Excel-import endpoint table](docs/images/api-landing.png)
 
 > **New developer? Start with [`.docs/tldr.md`](.docs/tldr.md)** — every doc summarised on one
 > page. The full guide lives in [`.docs/`](.docs/README.md).
@@ -180,12 +182,6 @@ Run `just` with no arguments to list every recipe. The ones you'll use daily:
 
 ## Troubleshooting
 
-### `just start` succeeds but every request returns 500
-
-The Vite build manifest is missing — the welcome route calls `@vite` and Laravel throws
-`Unable to locate file in Vite manifest`. Run `npm run build` (or the full `just bootstrap`),
-then reload.
-
 ### POST /api/products/import returns 200 but products never change
 
 That's the queue: the upload is stored and `ImportProductsFromExcelJob` is queued on the
@@ -231,7 +227,7 @@ laravel-inventory-api/
     Repositories/           # ProductRepository (incl. sha256 idempotency guard)
   database/                 # migrations, ProductFactory, ProductSeeder + sample xlsx
   graphql/                  # schema.graphql + product.graphql + user.graphql
-  routes/                   # api.php (products CRUD + import + import report), web.php (welcome)
+  routes/                   # api.php (products CRUD + import + import report), web.php (API landing page)
   tests/                    # ProductTest, ProductGraphqlTest, ProductImportTest
   xlsx_import_backend.sql   # MySQL dump matching .env.example defaults (optional)
   justfile, setup.ps1       # dev recipes + one-time machine setup

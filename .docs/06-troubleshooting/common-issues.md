@@ -55,11 +55,6 @@ delete can fail silently (the serving process still holds a handle from the shee
 check that runs at dispatch time). Harmless — the folder is git-ignored — delete old files
 manually if they bother you.
 
-## `just start` succeeds but every request 500s with "Unable to locate file in Vite manifest"
-
-The welcome view calls `@vite` and the build output is missing. Run `npm run build` (or the
-full `just bootstrap`, which includes it), then reload.
-
 ## MySQL errors (`could not find driver`, connection refused) on artisan commands
 
 Your `.env` still carries the committed `.env.example` MySQL defaults. `just bootstrap`

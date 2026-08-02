@@ -6,7 +6,7 @@ Laravel 12 product-inventory **API** (backend of `vue-inventory-ui`): REST CRUD 
 at `/api/products`, GraphQL at `/api/graphql`, and a bulk Excel import at
 `/api/products/import` that queues a job to net `sold`/`buy` rows per product and upsert
 stock quantities. Local-only, sqlite, port 8105. No auth on the product routes, no UI
-beyond the stock welcome page, and the import never creates products — it only adjusts
+beyond an API landing page at `/`, and the import never creates products — it only adjusts
 existing ids. Each run is recorded: row-level errors at `GET /api/imports/{id}`, and a
 byte-identical re-upload is ignored (sha256 idempotency key).
 
@@ -57,7 +57,7 @@ Annotated tree: the repository/DTO layer under `app/`, the import pipeline
 Real symptoms hit during kit verification: GraphQL 404 (`/api/graphql`, not `/graphql`),
 PowerShell curl JSON quoting, imports "doing nothing" without `just queue`, the missing
 `database/testing.sqlite` test failure (+ first-run migration hiccup), lingering uploads in
-`storage/app/private/products` on Windows, the Vite-manifest 500, MySQL leftovers in `.env`,
+`storage/app/private/products` on Windows, MySQL leftovers in `.env`,
 and port conflicts.
 
 ## [07-faq/faq.md](07-faq/faq.md)

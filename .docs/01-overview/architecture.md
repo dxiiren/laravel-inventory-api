@@ -29,8 +29,8 @@ ImportProductsFromExcelJob::handle   Import status → processing
       → buildUpsertData              fetch existing ids, add net change; unknown ids →
                                      row-level errors; skip results that land exactly on 0
       → Product::upsert(..., ['id'], ['quantity'])
-  → Storage::delete(uploaded file)
   → Import status → completed (failed on exception) + row_errors persisted
+  → Storage::delete(uploaded file)   in a finally — runs on success AND failure
 
 GET /api/imports/{id}
   → ImportController::show           the import report: file_name, file_hash, status,

@@ -57,7 +57,8 @@ Annotated tree: the repository/DTO layer under `app/`, the import pipeline
 Real symptoms hit during kit verification: GraphQL 404 (`/api/graphql`, not `/graphql`),
 PowerShell curl JSON quoting, imports "doing nothing" without `just queue`, the missing
 `database/testing.sqlite` test failure (+ first-run migration hiccup), lingering uploads in
-`storage/app/private/products` on Windows, MySQL leftovers in `.env`,
+`storage/app/private/products` (fixed — the job now cleans up on success and failure; only
+jobs that never ran can leave a file), MySQL leftovers in `.env`,
 and port conflicts.
 
 ## [07-faq/faq.md](07-faq/faq.md)

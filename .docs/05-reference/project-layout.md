@@ -26,7 +26,7 @@ laravel-inventory-api/
                                        # records row-level errors (spreadsheet row numbers)
     Jobs/
       ImportProductsFromExcelJob.php   # queued; sheet-count guard; updates Import status +
-                                       # row_errors; deletes file when done
+                                       # row_errors; deletes file when done (success or failure)
     Models/
       Product.php                      # $fillable incl. id; scopeFilter (search 5 columns)
       Import.php                       # file_name, file_hash (sha256), status, row_errors

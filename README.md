@@ -228,7 +228,7 @@ laravel-inventory-api/
   database/                 # migrations, ProductFactory, ProductSeeder + sample xlsx
   graphql/                  # schema.graphql + product.graphql + user.graphql
   routes/                   # api.php (products CRUD + import + import report), web.php (API landing page)
-  tests/                    # ProductTest, ProductGraphqlTest, ProductImportTest
+  tests/                    # ProductTest, ProductGraphqlTest, ProductImportTest, ImportFileCleanupTest
   xlsx_import_backend.sql   # MySQL dump matching .env.example defaults (optional)
   justfile, setup.ps1       # dev recipes + one-time machine setup
   .docs/                    # numbered documentation set

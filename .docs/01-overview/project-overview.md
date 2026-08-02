@@ -41,7 +41,8 @@ import pipeline.
   then bulk-`upsert`s quantities. Unknown product ids, missing columns and invalid statuses
   are skipped **and recorded as row-level errors** (real spreadsheet row numbers) on the
   `Import` record, readable at `GET /api/imports/{id}`; a product whose new quantity would
-  be exactly 0 is left unchanged. The uploaded file is deleted after a successful import.
+  be exactly 0 is left unchanged. The uploaded file is deleted once the import job has run —
+  on success and on failure alike (a failed run is retried by re-uploading the file).
 - **Idempotent re-imports** — the sha256 of the uploaded file is the idempotency key: a
   byte-identical re-upload is acknowledged with the original `import_id` and never
   dispatched again, so quantity nets can't double-apply. Only a `failed` run may retry.

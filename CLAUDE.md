@@ -30,7 +30,7 @@ the sibling `vue-inventory-ui` repo.
 | Validation | FormRequest + data DTO | `ImportProductRequest` (`file` required, `mimes:xlsx`, `max:5120`), `ProductData` (typed constructor promotion) |
 | API envelope | `ApiDataResponse` middleware | Wraps every JSON response as `{code, message, data, errors}` |
 | Assets | Vite 6 + Tailwind CSS 4 (npm) | Stock scaffolding only — the landing page is fully self-contained (inline CSS, no `@vite`); `just bootstrap` still builds once |
-| Tests | PHPUnit 11 via `php artisan test` | `ProductTest` (REST + import dispatch), `ProductGraphqlTest` (incl. REST/GraphQL search parity), `ProductImportTest` (row-level error report + idempotency, real generated xlsx); test env = `phpunit.xml` + `.env.testing` (sqlite `database/testing.sqlite`, sync queue) |
+| Tests | PHPUnit 11 via `php artisan test` | `ProductTest` (REST + import dispatch), `ProductGraphqlTest` (incl. REST/GraphQL search parity), `ProductImportTest` (row-level error report + idempotency, real generated xlsx), `ImportFileCleanupTest` (uploaded xlsx removed after the job — success and failure); test env = `phpunit.xml` + `.env.testing` (sqlite `database/testing.sqlite`, sync queue) |
 | Style | Laravel Pint | `just lint` / `just lint-fix` |
 | Task runner | `just` | wraps php/composer/npm (`justfile`); PHP pinned to `%LOCALAPPDATA%\Programs\php-8.4` |
 
@@ -46,7 +46,7 @@ laravel-inventory-api/
     Http/Middleware/        # ApiDataResponse ({code, message, data, errors} envelope)
     Http/Requests/          # ImportProductRequest (xlsx, <=5MB)
     Imports/                # ProductImport (chunked, nets sold/buy, upserts quantity, records row errors)
-    Jobs/                   # ImportProductsFromExcelJob (queued; updates Import record, deletes file)
+    Jobs/                   # ImportProductsFromExcelJob (queued; updates Import record, deletes file in a finally — success or failure)
     Models/                 # Product (scopeFilter), Import (file_hash, status, row_errors), User
     Providers/              # AppServiceProvider (repository binding)
     Repositories/           # ProductRepository

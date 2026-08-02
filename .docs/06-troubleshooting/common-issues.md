@@ -2,8 +2,8 @@
 
 > **TL;DR** Every symptom below was actually hit while verifying this kit. Check here before
 > debugging from scratch: GraphQL lives at `/api/graphql` (not `/graphql`), imports need
-> `just queue`, `just test` needs `database/testing.sqlite`, and uploaded sheets can linger
-> in storage on Windows.
+> `just queue`, `just test` needs `database/testing.sqlite`, and uploaded sheets only
+> linger in storage when their job never ran (fixed for completed jobs — see below).
 
 ## POST /graphql returns 404
 
@@ -46,14 +46,21 @@ New-Item database\testing.sqlite -ItemType File
 
 The **first** suite run after creating it may still fail with `no such table: products` —
 run `just test` again; `RefreshDatabase` migrates the file on that run and the suite goes
-green (21 tests).
+green (26 tests).
 
-## Uploaded .xlsx files pile up in `storage/app/private/products`
+## Uploaded .xlsx files pile up in `storage/app/private/products` (fixed)
 
-`ImportProductsFromExcelJob` calls `Storage::delete` after importing, but on Windows the
-delete can fail silently (the serving process still holds a handle from the sheet-count
-check that runs at dispatch time). Harmless — the folder is git-ignored — delete old files
-manually if they bother you.
+**Fixed** — `ImportProductsFromExcelJob` now deletes the stored upload in a `finally`
+block, so it is removed whether the import succeeds or fails
+(`ImportFileCleanupTest` guards both paths).
+
+The real cause (diagnosed, not the Windows-handle theory previously written here): the
+delete used to run only on the success path, so any import that failed — or any queued
+job wiped by `just fresh` before a worker ran — orphaned its upload forever. Windows
+`unlink` was never the problem; the delete works fine cross-process. Note the one case
+no job-side fix can cover: a file uploaded while **no worker is running** stays in
+storage until the job actually executes — run `just queue`. Old orphans from before the
+fix are harmless (the folder is git-ignored) — delete them manually.
 
 ## MySQL errors (`could not find driver`, connection refused) on artisan commands
 

@@ -5,11 +5,11 @@ A Laravel 12 product-inventory API: CRUD and search over a `products` table via 
 `product_id`/`status` rows (`sold` = −1, `buy` = +1) and a queued job nets the changes
 per product and upserts the new stock quantities. Every import run is recorded: row-level
 errors are reported at `GET /api/imports/{id}`, and re-uploading an identical file is
-ignored (sha256 idempotency key). Backend for the companion `upload-product-vue`
+ignored (sha256 idempotency key). Backend for the companion `vue-inventory-ui`
 frontend; the only page it serves itself is the stock welcome page.
 
 **Frontend:** the Vue UI half of this system lives at
-[dxiiren/upload-product-vue](https://github.com/dxiiren/upload-product-vue).
+[dxiiren/vue-inventory-ui](https://github.com/dxiiren/vue-inventory-ui).
 
 > **New developer? Start with [`.docs/tldr.md`](.docs/tldr.md)** — every doc summarised on one
 > page. The full guide lives in [`.docs/`](.docs/README.md).

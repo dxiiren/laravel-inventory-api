@@ -2,7 +2,7 @@
 
 ## [01-overview/project-overview.md](01-overview/project-overview.md)
 
-Laravel 12 product-inventory **API** (backend of `upload-product-vue`): REST CRUD + search
+Laravel 12 product-inventory **API** (backend of `vue-inventory-ui`): REST CRUD + search
 at `/api/products`, GraphQL at `/api/graphql`, and a bulk Excel import at
 `/api/products/import` that queues a job to net `sold`/`buy` rows per product and upsert
 stock quantities. Local-only, sqlite, port 8105. No auth on the product routes, no UI
@@ -64,5 +64,5 @@ and port conflicts.
 
 Why the queue exists, exactly what the import math does, why responses are enveloped (and
 `data.data` in lists), where GraphQL lives, sqlite vs the documented MySQL profile, pairing
-with `upload-product-vue`, the no-auth status, and why `id` is a client-supplied business
+with `vue-inventory-ui`, the no-auth status, and why `id` is a client-supplied business
 key.

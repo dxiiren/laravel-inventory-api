@@ -1,7 +1,7 @@
 # FAQ
 
 > **TL;DR** Quick answers on the queue, the import math, sqlite vs MySQL, the response
-> envelope, GraphQL, and how this repo pairs with the `upload-product-vue` frontend.
+> envelope, GraphQL, and how this repo pairs with the `vue-inventory-ui` frontend.
 
 ## Why does the import need a second terminal (`just queue`)?
 
@@ -42,7 +42,7 @@ local dev on sqlite — zero services to install, and `just bootstrap` wires it 
 Only your git-ignored `.env` differs; never edit `.env.example` or the migrations to "fix"
 local issues.
 
-## How does this pair with `upload-product-vue`?
+## How does this pair with `vue-inventory-ui`?
 
 That sibling repo is the frontend: it uploads the `.xlsx` and browses products over REST or
 GraphQL. Its default backend URL is `http://127.0.0.1:8000`, so either serve this app there

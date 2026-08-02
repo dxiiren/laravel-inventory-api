@@ -21,7 +21,7 @@
 | `just stop` | Kill only THIS repo's `php.exe` processes (matched by repo path in the command line). |
 
 Override the port per-invocation: `$env:PORT=8000; just start` (8000 = the
-`upload-product-vue` frontend's default backend URL).
+`vue-inventory-ui` frontend's default backend URL).
 
 ## Database
 

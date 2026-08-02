@@ -9,7 +9,7 @@ A Laravel 12 product-inventory API (no UI beyond the stock welcome page): CRUD a
 over a `products` table via REST **and** GraphQL (Lighthouse), plus a bulk Excel import —
 POST an `.xlsx` of `product_id`/`status` rows (`sold` = −1, `buy` = +1) and a queued job
 nets the changes per product and upserts the new stock quantities. Companion frontend:
-the sibling `upload-product-vue` repo.
+the sibling `vue-inventory-ui` repo.
 
 - **Repo:** GitHub — `github.com/dxiiren/laravel-inventory-api`
 - **Runs locally only** — no CI/CD, no deployment target. `just start` serves on
@@ -93,7 +93,7 @@ laravel-inventory-api/
   file is a no-op: the sha256 `file_hash` is the idempotency key (only `failed` runs retry).
 - The local `.env` is sqlite; the committed `.env.example` is MySQL. Never "fix" `.env.example`,
   `config/database.php`, or committed migrations.
-- The companion `upload-product-vue` frontend expects this backend on port **8000** by
+- The companion `vue-inventory-ui` frontend expects this backend on port **8000** by
   default — pair them with `$env:PORT=8000; just start` (or point the frontend at 8105).
 
 ## Project Skills

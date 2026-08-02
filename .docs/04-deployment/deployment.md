@@ -29,7 +29,7 @@ Honest minimum checklist, in order of pain:
 4. **Storage** — uploaded sheets land on the local disk (`storage/app/private/products`).
    Multiple app instances need a shared disk (S3 config scaffolding is already in
    `.env.example`).
-5. **CORS** — the companion `upload-product-vue` frontend calls this API cross-origin;
+5. **CORS** — the companion `vue-inventory-ui` frontend calls this API cross-origin;
    verify `config/cors.php` (framework default allows `api/*` from `*` — tighten it).
 6. **Build pipeline** — `npm run build` at deploy time; `composer install --no-dev
    --optimize-autoloader`; `php artisan config:cache route:cache`.

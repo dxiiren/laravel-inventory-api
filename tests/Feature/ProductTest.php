@@ -190,8 +190,11 @@ class ProductTest extends TestCase
 
     public function test_can_import_products()
     {
-        // Prepare
+        // Prepare — fake the disk too: the queue is faked, so the job that
+        // normally deletes the stored upload never runs. Without Storage::fake
+        // every suite run would orphan one real file in storage/app/private.
         Queue::fake();
+        Storage::fake('local');
 
         $payload = new UploadedFile(
             database_path('seeders/product_status_list.xlsx'),

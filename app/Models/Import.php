@@ -3,10 +3,14 @@
 namespace App\Models;
 
 use App\Enums\ImportStatusEnum;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Import extends Model
 {
+    /** @use HasFactory<\Database\Factories\ImportFactory> */
+    use HasFactory;
+
     protected $table = 'imports';
 
     protected $fillable = [

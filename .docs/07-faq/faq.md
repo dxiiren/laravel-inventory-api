@@ -51,10 +51,16 @@ if you want its uploads to actually import.
 
 ## Is there any authentication?
 
-Not on the product routes. Sanctum is installed and guards only `GET /api/user`; nothing
-issues tokens. Fine locally — see
-[../04-deployment/deployment.md](../04-deployment/deployment.md) before exposing this
-anywhere.
+Yes, on everything that writes. `auth:sanctum` guards `POST/PUT/PATCH/DELETE
+/api/products*`, `POST /api/products/import`, `GET /api/imports/{id}` and `GET /api/user`.
+Reads stay public: `GET /api/products` and `POST /api/graphql` need no token, because the
+companion `vue-inventory-ui` browses the catalogue anonymously.
+
+Nothing in the app issues tokens — there is no login route. Mint one by hand for local
+work: `php artisan tinker` then
+`User::factory()->create()->createToken('local')->plainTextToken`. See
+[../04-deployment/deployment.md](../04-deployment/deployment.md) for what is still open
+before exposing this anywhere.
 
 ## Why is `id` fillable / client-supplied?
 

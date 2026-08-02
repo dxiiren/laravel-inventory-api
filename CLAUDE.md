@@ -30,7 +30,8 @@ the sibling `vue-inventory-ui` repo.
 | Validation | FormRequest + data DTO | `ImportProductRequest` (`file` required, `mimes:xlsx`, `max:5120`), `ProductData` (typed constructor promotion) |
 | API envelope | `ApiDataResponse` middleware | Wraps every JSON response as `{code, message, data, errors}` |
 | Assets | Vite 6 + Tailwind CSS 4 (npm) | Stock scaffolding only — the landing page is fully self-contained (inline CSS, no `@vite`); `just bootstrap` still builds once |
-| Tests | PHPUnit 11 via `php artisan test` | `ProductTest` (REST + import dispatch), `ProductGraphqlTest` (incl. REST/GraphQL search parity), `ProductImportTest` (row-level error report + idempotency, real generated xlsx), `ImportFileCleanupTest` (uploaded xlsx removed after the job — success and failure); test env = `phpunit.xml` + `.env.testing` (sqlite `database/testing.sqlite`, sync queue) |
+| Auth | **Laravel Sanctum 4** | `auth:sanctum` guards every write — `POST/PUT/PATCH/DELETE /api/products*`, `POST /api/products/import`, `GET /api/imports/{id}` — plus `GET /api/user`. `GET /api/products` and `POST /api/graphql` stay public for the companion UI. Nothing issues tokens: mint one with `$user->createToken(...)` |
+| Tests | PHPUnit 11 via `php artisan test` | 64 tests. `ApiAuthorizationTest` (the auth contract), `ApiDataResponseEnvelopeTest` (the `{code, message, data, errors}` envelope), `ProductTest` (REST + import dispatch), `ProductGraphqlTest` (REST/GraphQL search, pagination and orderBy parity), `ProductImportTest` + `ProductImportFailureTest` (row-level errors, the net-zero skip, rejected uploads), `ImportStatusTransitionTest` (pending → processing → completed; failed runs retry), `ImportFileCleanupTest`, `SmokeTest`; test env = `phpunit.xml` (sqlite **`:memory:`**, sync queue) — green from a clean clone with no sqlite file on disk |
 | Style | Laravel Pint | `just lint` / `just lint-fix` |
 | Task runner | `just` | wraps php/composer/npm (`justfile`); PHP pinned to `%LOCALAPPDATA%\Programs\php-8.4` |
 
@@ -53,11 +54,11 @@ laravel-inventory-api/
   bootstrap/, config/       # stock Laravel 12 config (cache/session/queue on database)
   database/
     migrations/             # users/cache/jobs + personal_access_tokens + products + imports
-    factories/, seeders/    # ProductFactory, ProductSeeder (5 iPhones) + sample xlsx
+    factories/, seeders/    # ProductFactory, ImportFactory, ProductSeeder (5 iPhones) + sample xlsx
   graphql/                  # schema.graphql (+ product/user via #import)
   resources/                # welcome view (API landing page, inline CSS) + Vite inputs (app.css, app.js)
   routes/                   # api.php (products CRUD + import + GET imports/{id}), web.php (landing page)
-  tests/                    # ProductTest, ProductGraphqlTest, ProductImportTest + stock examples
+  tests/                    # ApiAuthorization, ApiDataResponseEnvelope, Product, ProductGraphql, ProductImport, ProductImportFailure, ImportStatusTransition, ImportFileCleanup, Smoke
   xlsx_import_backend.sql   # MySQL dump matching .env.example defaults (optional)
   justfile, setup.ps1       # dev recipes + one-time machine setup
   .docs/                    # numbered documentation set
@@ -94,6 +95,12 @@ laravel-inventory-api/
   file is a no-op: the sha256 `file_hash` is the idempotency key (only `failed` runs retry).
 - The local `.env` is sqlite; the committed `.env.example` is MySQL. Never "fix" `.env.example`,
   `config/database.php`, or committed migrations.
+- Every write endpoint needs a Sanctum token. In tests use `Sanctum::actingAs(User::factory()
+  ->create())`; by hand, `php artisan tinker` then
+  `User::factory()->create()->createToken('local')->plainTextToken`.
+- `phpunit.xml` pins the test database to sqlite `:memory:` — do not comment that line out
+  again, and never set `RefreshDatabaseState::$migrated = true` in a test. Both together
+  made the suite depend on a pre-migrated `database/testing.sqlite` that no clean clone has.
 - The companion `vue-inventory-ui` frontend expects this backend on port **8000** by
   default — pair them with `$env:PORT=8000; just start` (or point the frontend at 8105).
 

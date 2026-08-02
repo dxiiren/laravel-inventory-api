@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Enums\ImportStatusEnum;
 use App\Jobs\ImportProductsFromExcelJob;
 use App\Models\Import;
+use App\Models\User;
 use Database\Seeders\ProductSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
@@ -27,6 +29,9 @@ class ImportFileCleanupTest extends TestCase
         parent::setUp();
         Storage::fake('local');
         $this->seed(ProductSeeder::class);
+
+        // The import endpoint is behind auth:sanctum.
+        Sanctum::actingAs(User::factory()->create());
     }
 
     public function test_the_uploaded_file_is_deleted_after_a_successful_import(): void

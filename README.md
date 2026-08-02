@@ -50,7 +50,18 @@ The app is now at **http://127.0.0.1:8105**. Stop it with `just stop`.
 
 Try it: `curl.exe http://127.0.0.1:8105/api/products` — a paginated JSON product list
 wrapped in the `{code, message, data, errors}` envelope. GraphQL lives at
-`POST http://127.0.0.1:8105/api/graphql`.
+`POST http://127.0.0.1:8105/api/graphql`. Both reads are public.
+
+**Writes need a Sanctum token.** `POST/PUT/PATCH/DELETE /api/products*`,
+`POST /api/products/import` and `GET /api/imports/{id}` sit behind `auth:sanctum` and
+answer `401` without one. There is no login route yet — mint a token by hand:
+
+```powershell
+php artisan tinker
+# >>> App\Models\User::factory()->create()->createToken('local')->plainTextToken
+```
+
+Then send it as `Authorization: Bearer <token>` on every write.
 
 **Excel import needs a queue worker.** `POST /api/products/import` only queues the job —
 run `just queue` in a second terminal to actually process it. A sample upload file is at
@@ -124,7 +135,8 @@ reuses the same model scope as the REST `?search=` — both return the same resu
 ### Excel import + the import report
 
 ```powershell
-curl.exe -F "file=@database/seeders/product_status_list.xlsx" http://127.0.0.1:8105/api/products/import
+curl.exe -H "Authorization: Bearer $TOKEN" `
+  -F "file=@database/seeders/product_status_list.xlsx" http://127.0.0.1:8105/api/products/import
 # -> {"code":200,"message":"Uploading is in process and submitted successfully",
 #     "data":{"import_id":1, ...},"errors":null}
 ```
@@ -176,7 +188,7 @@ Run `just` with no arguments to list every recipe. The ones you'll use daily:
 | `just queue` | Run the queue worker (foreground) — processes Excel import jobs |
 | `just migrate` | Run pending migrations |
 | `just fresh` | Drop, re-migrate and seed (5 sample products) — destroys local data |
-| `just test` | PHPUnit suite (`just test --filter=ProductTest` to narrow) |
+| `just test` | PHPUnit suite, 64 tests on sqlite `:memory:` (`just test --filter=ProductTest` to narrow) |
 | `just lint` / `just lint-fix` | Laravel Pint style check / auto-fix |
 | `just claudex` | Launch Claude Code (Sonnet, all permissions) |
 
@@ -228,7 +240,7 @@ laravel-inventory-api/
   database/                 # migrations, ProductFactory, ProductSeeder + sample xlsx
   graphql/                  # schema.graphql + product.graphql + user.graphql
   routes/                   # api.php (products CRUD + import + import report), web.php (API landing page)
-  tests/                    # ProductTest, ProductGraphqlTest, ProductImportTest, ImportFileCleanupTest
+  tests/                    # ApiAuthorization, ApiDataResponseEnvelope, Product, ProductGraphql, ProductImport, ProductImportFailure, ImportStatusTransition, ImportFileCleanup, Smoke
   xlsx_import_backend.sql   # MySQL dump matching .env.example defaults (optional)
   justfile, setup.ps1       # dev recipes + one-time machine setup
   .docs/                    # numbered documentation set

@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Product;
 use Database\Seeders\ProductSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\URL;
 use Nuwave\Lighthouse\Testing\MakesGraphQLRequests;
 use Nuwave\Lighthouse\Testing\RefreshesSchemaCache;
@@ -13,14 +12,9 @@ use Tests\TestCase;
 
 class ProductGraphqlTest extends TestCase
 {
-    use RefreshDatabase, MakesGraphQLRequests, RefreshesSchemaCache;
+    use MakesGraphQLRequests, RefreshDatabase, RefreshesSchemaCache;
 
-    public function beforeRefreshingDatabase(): void
-    {
-        RefreshDatabaseState::$migrated = true;
-    }
-
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         URL::forceRootUrl(config('app.url'));
@@ -29,10 +23,10 @@ class ProductGraphqlTest extends TestCase
 
     public function test_get_all_products_graphql()
     {
-        //prepare
+        // prepare
         Product::factory()->count(20)->create();
 
-        //test
+        // test
         $response = $this->graphQL(
             /** @lang GraphQL **/
             '
@@ -59,7 +53,7 @@ class ProductGraphqlTest extends TestCase
         );
         $response->assertOk();
 
-        //assert
+        // assert
         $this->assertArrayHasKey('data', $response->json());
         $this->assertArrayHasKey('products', $response->json('data'));
         $this->assertArrayHasKey('paginatorInfo', $response->json('data.products'));
@@ -72,7 +66,7 @@ class ProductGraphqlTest extends TestCase
 
     public function test_get_product_by_id_graphql()
     {
-        //prepare
+        // prepare
         Product::factory()->create([
             'id' => 9999,
             'type' => 'Smartphone',
@@ -82,7 +76,7 @@ class ProductGraphqlTest extends TestCase
             'quantity' => 13,
         ]);
 
-        //test
+        // test
         $response = $this->graphQL(
             /** @lang GraphQL **/
             '
@@ -108,12 +102,12 @@ class ProductGraphqlTest extends TestCase
             ',
             /* GraphQL Variable */
             [
-                "id" => 9999
+                'id' => 9999,
             ],
         );
         $response->assertOk();
 
-        //assert
+        // assert
         $this->assertArrayHasKey('data', $response->json());
         $this->assertArrayHasKey('products', $response->json('data'));
         $this->assertNotNull($response->json('data.products.data.0'));
@@ -122,7 +116,7 @@ class ProductGraphqlTest extends TestCase
 
     public function test_get_product_by_type_graphql()
     {
-        //prepare
+        // prepare
         Product::factory()->create([
             'id' => 9999,
             'type' => 'Smartphone',
@@ -132,7 +126,7 @@ class ProductGraphqlTest extends TestCase
             'quantity' => 13,
         ]);
 
-        //test
+        // test
         $response = $this->graphQL(
             /** @lang GraphQL **/
             '
@@ -158,12 +152,12 @@ class ProductGraphqlTest extends TestCase
             ',
             /* GraphQL Variable */
             [
-                "type" => "Smartphone"
+                'type' => 'Smartphone',
             ],
         );
         $response->assertOk();
 
-        //assert
+        // assert
         $this->assertArrayHasKey('data', $response->json());
         $this->assertArrayHasKey('products', $response->json('data'));
         $this->assertNotNull($response->json('data.products.data.0'));
@@ -172,7 +166,7 @@ class ProductGraphqlTest extends TestCase
 
     public function test_find_product_using_like()
     {
-        //prepare
+        // prepare
         Product::factory()->create([
             'id' => 9999,
             'type' => 'Smartphone',
@@ -182,7 +176,7 @@ class ProductGraphqlTest extends TestCase
             'quantity' => 13,
         ]);
 
-        //test
+        // test
         $response = $this->graphQL(
             /** @lang GraphQL **/
             '
@@ -208,12 +202,12 @@ class ProductGraphqlTest extends TestCase
             ',
             /* GraphQL Variable */
             [
-                "type" => "Smart%"
+                'type' => 'Smart%',
             ],
         );
         $response->assertOk();
 
-        //assert
+        // assert
         $this->assertArrayHasKey('data', $response->json());
         $this->assertArrayHasKey('products', $response->json('data'));
         $this->assertNotNull($response->json('data.products.data.0'));
@@ -259,8 +253,8 @@ class ProductGraphqlTest extends TestCase
             }
             ',
             [
-                "type" => "Smart%",
-                "brand" => "App%"
+                'type' => 'Smart%',
+                'brand' => 'App%',
             ]
         );
 
@@ -315,8 +309,8 @@ class ProductGraphqlTest extends TestCase
             }
             ',
             [
-                "type" => "Smart%",
-                "brand" => "App%"
+                'type' => 'Smart%',
+                'brand' => 'App%',
             ]
         );
 
@@ -367,8 +361,8 @@ class ProductGraphqlTest extends TestCase
             ',
             [
                 'filter' => [
-                    'search' => 'Smart'
-                ]
+                    'search' => 'Smart',
+                ],
             ]
         );
 
@@ -407,7 +401,7 @@ class ProductGraphqlTest extends TestCase
 
         foreach ($searchTerms as $term) {
             // REST result set
-            $rest = $this->getJson('/api/products?search=' . urlencode($term));
+            $rest = $this->getJson('/api/products?search='.urlencode($term));
             $rest->assertOk();
             $restIds = collect($rest->json('data.data'))->pluck('id')->sort()->values()->all();
 
@@ -436,5 +430,122 @@ class ProductGraphqlTest extends TestCase
             $this->assertNotEmpty($restIds, "REST search '{$term}' should match at least one product");
             $this->assertSame($restIds, $graphqlIds, "GraphQL and REST disagree for search '{$term}'");
         }
+    }
+
+    /**
+     * Deterministic ids well outside ProductFactory's random 4000-9999 range, so
+     * the paging assertions can never collide with a seeded or faked product.
+     *
+     * @return array<int, int> every id, ascending
+     */
+    private function seedPagingFixture(int $count = 25): array
+    {
+        $ids = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $id = 1000 + $i;
+            Product::factory()->create([
+                'id' => $id,
+                'type' => 'Smartphone',
+                'brand' => 'Apple',
+                'model' => 'iPhone SE',
+                'capacity' => '2GB/64GB',
+                'quantity' => $count - $i, // strictly descending, so quantity ordering is unambiguous
+            ]);
+            $ids[] = $id;
+        }
+
+        return $ids;
+    }
+
+    /** @return array<int, int> */
+    private function restIds(int $page): array
+    {
+        $response = $this->getJson('/api/products?page='.$page)->assertOk();
+
+        return array_map('intval', array_column($response->json('data.data'), 'id'));
+    }
+
+    /** @return array<int, int> */
+    private function graphqlIds(int $page, string $column = 'id', string $order = 'ASC'): array
+    {
+        $response = $this->graphQL(
+            /** @lang GraphQL **/
+            '
+            query PagedProducts($page: Int!, $column: ProductColumn!, $order: SortOrder!) {
+                products(page: $page, orderBy: [{ column: $column, order: $order }]) {
+                    paginatorInfo { total currentPage perPage lastPage }
+                    data { id quantity }
+                }
+            }
+            ',
+            ['page' => $page, 'column' => $column, 'order' => $order]
+        )->assertOk();
+
+        return array_map('intval', array_column($response->json('data.products.data'), 'id'));
+    }
+
+    public function test_graphql_pagination_matches_rest_pagination()
+    {
+        $allIds = $this->seedPagingFixture();
+
+        // REST paginates 10 per page ordered by id ascending
+        // (ProductRepository::getProducts); Lighthouse's @paginate defaults to 10
+        // as well, so the same page number must yield the same slice.
+        $restTotal = $this->getJson('/api/products?page=1')->assertOk()->json('data.total');
+        $graphqlTotal = $this->graphQL(
+            /** @lang GraphQL **/
+            '{ products(page: 1, orderBy: [{ column: id, order: ASC }]) { paginatorInfo { total perPage } } }'
+        )->assertOk()->json('data.products.paginatorInfo');
+
+        $this->assertSame(count($allIds), $restTotal);
+        $this->assertSame($restTotal, $graphqlTotal['total'], 'REST and GraphQL disagree on the total');
+        $this->assertSame(10, $graphqlTotal['perPage']);
+
+        foreach ([1, 2, 3] as $page) {
+            $rest = $this->restIds($page);
+            $graphql = $this->graphqlIds($page);
+
+            $this->assertNotEmpty($rest, "REST page {$page} should not be empty");
+            $this->assertSame($rest, $graphql, "REST and GraphQL disagree on page {$page}");
+        }
+
+        // Page 2 specifically: ids 1010..1019, in order, no overlap with page 1.
+        $this->assertSame(array_slice($allIds, 10, 10), $this->restIds(2));
+        $this->assertSame([], array_intersect($this->restIds(1), $this->restIds(2)));
+
+        // Past the last page both APIs return an empty slice rather than wrapping.
+        $this->assertSame([], $this->restIds(99));
+        $this->assertSame([], $this->graphqlIds(99));
+    }
+
+    public function test_graphql_order_by_matches_the_rest_ordering()
+    {
+        $allIds = $this->seedPagingFixture();
+
+        // REST has one fixed ordering — id ascending — across every page.
+        $restAll = array_merge($this->restIds(1), $this->restIds(2), $this->restIds(3));
+        $this->assertSame($allIds, $restAll);
+
+        // GraphQL asked for the same ordering agrees page for page.
+        $graphqlAsc = array_merge($this->graphqlIds(1), $this->graphqlIds(2), $this->graphqlIds(3));
+        $this->assertSame($restAll, $graphqlAsc);
+
+        // And DESC is exactly that sequence reversed — not a differently paged set.
+        $graphqlDesc = array_merge(
+            $this->graphqlIds(1, 'id', 'DESC'),
+            $this->graphqlIds(2, 'id', 'DESC'),
+            $this->graphqlIds(3, 'id', 'DESC'),
+        );
+        $this->assertSame(array_reverse($restAll), $graphqlDesc);
+
+        // Ordering by a non-key column reorders the pages, and the fixture's
+        // strictly descending quantities make the expected sequence exact.
+        $byQuantityAsc = array_merge(
+            $this->graphqlIds(1, 'quantity', 'ASC'),
+            $this->graphqlIds(2, 'quantity', 'ASC'),
+            $this->graphqlIds(3, 'quantity', 'ASC'),
+        );
+        $this->assertSame(array_reverse($allIds), $byQuantityAsc);
     }
 }

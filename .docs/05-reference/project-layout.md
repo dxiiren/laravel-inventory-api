@@ -50,13 +50,19 @@ laravel-inventory-api/
     web.php                            # GET / → the API landing page
   storage/                             # runtime files; uploads land in app/private/products
   tests/
+    Feature/ApiAuthorizationTest.php   # the auth:sanctum contract: 401 for guests, 2xx with a token
+    Feature/ApiDataResponseEnvelopeTest.php # the {code, message, data, errors} envelope
+    Feature/ImportFileCleanupTest.php  # the uploaded xlsx is deleted on success and on failure
+    Feature/ImportStatusTransitionTest.php # pending -> processing -> completed; failed runs retry
     Feature/ProductTest.php            # REST + import dispatch (Queue::fake, Excel::fake)
-    Feature/ProductGraphqlTest.php     # GraphQL queries + REST/GraphQL search parity
+    Feature/ProductGraphqlTest.php     # GraphQL queries + REST/GraphQL search, paging and orderBy parity
     Feature/ProductImportTest.php      # row-level error report + idempotent re-import (real xlsx)
+    Feature/ProductImportFailureTest.php # malformed rows, the net-zero skip, rejected uploads
+    Feature/SmokeTest.php              # the API landing page renders and lists every endpoint
   schema-directives.graphql            # Lighthouse directive stubs for the IDE (not runtime)
   xlsx_import_backend.sql              # MySQL dump matching .env.example (optional profile)
   .env.example                         # committed defaults (MySQL) — never edit for local fixes
-  .env.testing                         # committed test env (sqlite testing.sqlite, sync queue)
+  .env.testing                         # committed test env; phpunit.xml overrides DB_DATABASE to :memory:
   justfile                             # day-2 recipes (just --list)
   setup.ps1                            # one-time machine setup (idempotent)
   CLAUDE.md                            # AI-assistant ground rules + stack quick reference

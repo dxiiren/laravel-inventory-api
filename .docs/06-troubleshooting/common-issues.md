@@ -2,7 +2,8 @@
 
 > **TL;DR** Every symptom below was actually hit while verifying this kit. Check here before
 > debugging from scratch: GraphQL lives at `/api/graphql` (not `/graphql`), imports need
-> `just queue`, `just test` needs `database/testing.sqlite`, and uploaded sheets only
+> `just queue`, `just test` runs on sqlite `:memory:` and needs no file on disk, and
+> uploaded sheets only
 > linger in storage when their job never ran (fixed for completed jobs — see below).
 
 ## POST /graphql returns 404
@@ -34,19 +35,17 @@ malformed rows are listed there per spreadsheet row. And if you re-uploaded the 
 file**, that's the sha256 idempotency guard: duplicates are acknowledged but never
 re-applied.
 
-## `just test` fails with `SQLiteDatabaseDoesNotExistException ... database/testing.sqlite`
+## `just test` fails with `SQLiteDatabaseDoesNotExistException ... database/testing.sqlite` (fixed)
 
-The committed `.env.testing` points the test suite at `database/testing.sqlite`, which is
-git-ignored and doesn't exist on a fresh clone. `just bootstrap` now creates it; if you
-bootstrapped before that fix, create it once:
+**Fixed** — `phpunit.xml` had its `DB_DATABASE=:memory:` line commented out, so the suite
+ran against the on-disk `database/testing.sqlite` named in `.env.testing`. Worse,
+`ProductGraphqlTest` set `RefreshDatabaseState::$migrated = true`, which skipped migrations
+entirely — so the suite's green depended on a pre-migrated file that a clean clone never
+has (hence the old "run it twice" advice and the `no such table: products` failure).
 
-```powershell
-New-Item database\testing.sqlite -ItemType File
-```
-
-The **first** suite run after creating it may still fail with `no such table: products` —
-run `just test` again; `RefreshDatabase` migrates the file on that run and the suite goes
-green (26 tests).
+Both are gone: `phpunit.xml` sets `:memory:` again and the migration-skipping hook is
+deleted. `just test` is green from a clean clone with no sqlite file on disk at all
+(64 tests).
 
 ## Uploaded .xlsx files pile up in `storage/app/private/products` (fixed)
 

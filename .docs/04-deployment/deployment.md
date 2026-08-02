@@ -18,9 +18,13 @@
 
 Honest minimum checklist, in order of pain:
 
-1. **Auth** — `/api/products*` write routes (store/update/destroy/import) are completely
-   unauthenticated. Sanctum is installed and `auth:sanctum` already guards `GET /api/user`;
-   extend it to the product group before anything else.
+1. **Auth** — done for writes: `auth:sanctum` now guards `POST/PUT/PATCH/DELETE
+   /api/products*`, `POST /api/products/import` and `GET /api/imports/{id}`
+   (`ApiAuthorizationTest` pins it). Still open before exposing this anywhere: `GET
+   /api/products` and `POST /api/graphql` are deliberately public, and the GraphQL `users`
+   query publishes every user's name and email to anonymous callers — restrict or drop it.
+   Nothing in the app issues tokens yet either; create them with
+   `$user->createToken(...)`.
 2. **Queue supervision** — the import depends on a worker. `php artisan queue:work` under a
    supervisor (or a `sync`-free horizon setup), not a terminal window.
 3. **Real web server + real DB** — `artisan serve` is a dev tool; front with nginx/Apache +

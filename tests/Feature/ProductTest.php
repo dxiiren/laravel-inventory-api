@@ -2,69 +2,103 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\Product;
 use App\Data\ProductData;
 use App\Imports\ProductImport;
-use Illuminate\Http\UploadedFile;
+use App\Jobs\ImportProductsFromExcelJob;
+use App\Models\Product;
+use App\Models\User;
 use Database\Seeders\ProductSeeder;
-use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
-use App\Jobs\ImportProductsFromExcelJob;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
+use Maatwebsite\Excel\Facades\Excel;
+use Tests\TestCase;
 
 class ProductTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         $this->seed(ProductSeeder::class);
+
+        // Product writes and the import endpoint are behind auth:sanctum.
+        Sanctum::actingAs(User::factory()->create());
     }
 
     public function test_can_get_all_products()
     {
-        //prepare
+        // prepare
         Product::factory()->count(20)->create([
             'brand' => 'Apple',
             'model' => 'iPhone SE',
         ]);
 
-        //test
+        // test
         $response = $this->getJson('/api/products');
 
-        //assert
+        // assert
         $response->assertOk();
         $response->assertJsonCount(10, 'data.data');
     }
 
     public function test_can_get_products_with_filters()
     {
-        //prepare
-        Product::factory()->count(3)->create([
+        // prepare — the ProductSeeder rows are all Apple/iPhone too, so pin the
+        // expected id set explicitly rather than trusting a count.
+        $apple = Product::factory()->count(3)->create([
             'brand' => 'Apple',
             'model' => 'iPhone SE',
         ]);
 
-        Product::factory()->count(5)->create([
+        $samsung = Product::factory()->count(5)->create([
             'brand' => 'Samsung',
             'model' => 'Galaxy S21',
         ]);
 
-        Product::factory()->count(3)->create([
+        $apple = $apple->merge(Product::factory()->count(3)->create([
             'brand' => 'Apple',
             'model' => 'iPhone 12',
-        ]);
+        ]));
 
-        //test
-        $response = $this->getJson('/api/products?search=Apple');
+        // test
+        $response = $this->getJson('/api/products?search=Apple&page=1');
 
-        //assert
+        // assert
         $response->assertOk();
 
-        foreach ($response->json('data.data') as $product) {
+        $returned = $response->json('data.data');
+
+        // Without this the loop below passes vacuously on an empty result set.
+        $this->assertNotEmpty($returned, 'the Apple search must match at least one product');
+
+        $returnedIds = array_column($returned, 'id');
+
+        // ProductRepository::getProducts() orders by id ascending, 10 per page.
+        $sorted = $returnedIds;
+        sort($sorted);
+        $this->assertSame($sorted, $returnedIds, 'products must come back ordered by id ascending');
+
+        $expectedIds = Product::query()
+            ->where('brand', 'Apple')
+            ->orderBy('id')
+            ->limit(10)
+            ->pluck('id')
+            ->all();
+        $this->assertSame($expectedIds, $returnedIds);
+
+        foreach ($apple as $product) {
+            $this->assertContains($product->id, Product::query()->where('brand', 'Apple')->pluck('id')->all());
+        }
+
+        foreach ($samsung as $product) {
+            $this->assertNotContains($product->id, $returnedIds, 'a Samsung product leaked into an Apple search');
+        }
+
+        foreach ($returned as $product) {
             $this->assertEquals('Apple', $product['brand']);
             $this->assertStringContainsString('iPhone', $product['model']);
         }
@@ -72,7 +106,7 @@ class ProductTest extends TestCase
 
     public function test_can_store_product()
     {
-        //prepare
+        // prepare
         $productData = ProductData::from([
             'type' => 'Smartphone',
             'brand' => 'Apple',
@@ -81,10 +115,10 @@ class ProductTest extends TestCase
             'quantity' => 13,
         ]);
 
-        //test
+        // test
         $response = $this->postJson('/api/products', $productData->toArray());
 
-        //assert
+        // assert
         $response->assertCreated();
         $response->assertJsonFragment($productData->toArray());
         $this->assertDatabaseHas('products', $productData->toArray());
@@ -92,7 +126,7 @@ class ProductTest extends TestCase
 
     public function test_can_update_product()
     {
-        //prepare
+        // prepare
         $product = Product::factory()->create([
             'id' => 99999,
             'capacity' => '2GB/64GB',
@@ -107,10 +141,10 @@ class ProductTest extends TestCase
             'quantity' => 20,
         ]);
 
-        //test
-        $response = $this->putJson('/api/products/' . $product->id, $productData->toArray());
+        // test
+        $response = $this->putJson('/api/products/'.$product->id, $productData->toArray());
 
-        //assert
+        // assert
         $response->assertOk();
         $response->assertJsonFragment($productData->toArray());
         $this->assertDatabaseHas('products', [
@@ -122,24 +156,24 @@ class ProductTest extends TestCase
 
     public function test_can_delete_product()
     {
-        //prepare
+        // prepare
         $product = Product::factory()->create([
             'id' => 4452,
             'capacity' => '2GB/64GB',
             'quantity' => 10,
         ]);
 
-        //test
-        $response = $this->deleteJson('/api/products/' . $product->id);
+        // test
+        $response = $this->deleteJson('/api/products/'.$product->id);
 
-        //assert
+        // assert
         $response->assertOk();
         $this->assertDatabaseMissing('products', ['id' => 4452]);
     }
 
     public function test_cant_store_product_with_no_quantity()
     {
-        //prepare
+        // prepare
         $productData = ProductData::from([
             'type' => 'Smartphone',
             'brand' => 'Apple',
@@ -151,17 +185,17 @@ class ProductTest extends TestCase
         $payload = $productData->toArray();
         unset($payload['quantity']);
 
-        //test
+        // test
         $response = $this->postJson('/api/products', $payload);
 
-        //assert
+        // assert
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['quantity']);
     }
 
     public function test_cant_update_product_with_no_quantity()
     {
-        //prepare
+        // prepare
         $product = Product::factory()->create([
             'id' => 4453,
             'capacity' => '2GB/64GB',
@@ -180,10 +214,10 @@ class ProductTest extends TestCase
         $payload = $productData->toArray();
         unset($payload['quantity']);
 
-        //test
-        $response = $this->putJson('/api/products/' . $product->id, $payload);
+        // test
+        $response = $this->putJson('/api/products/'.$product->id, $payload);
 
-        //assert
+        // assert
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['quantity']);
     }
@@ -204,12 +238,12 @@ class ProductTest extends TestCase
             true
         );
 
-        //test
+        // test
         $response = $this->postJson('/api/products/import', [
             'file' => $payload,
         ]);
 
-        //assert
+        // assert
         $response->assertOk();
         $response->assertJson([
             'message' => 'Uploading is in process and submitted successfully',
@@ -229,12 +263,12 @@ class ProductTest extends TestCase
             'text/plain'
         );
 
-        //test
+        // test
         $response = $this->postJson('/api/products/import', [
             'file' => $fakeUploadedFile,
         ]);
 
-        //assert
+        // assert
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['file']);
     }
@@ -244,7 +278,7 @@ class ProductTest extends TestCase
         // Prepare
         Excel::fake();
 
-        $storedPath = 'imports/' . uniqid() . '.xlsx';
+        $storedPath = 'imports/'.uniqid().'.xlsx';
 
         Storage::disk(config('filesystems.default', 'local'))->put(
             $storedPath,
@@ -258,7 +292,7 @@ class ProductTest extends TestCase
         Excel::assertImported(
             $storedPath,
             config('filesystems.default', 'local'),
-            fn($import) => $import instanceof ProductImport,
+            fn ($import) => $import instanceof ProductImport,
             \Maatwebsite\Excel\Excel::XLSX
         );
     }
@@ -314,12 +348,12 @@ class ProductTest extends TestCase
             true
         );
 
-        //test
+        // test
         $response = $this->postJson('/api/products/import', [
             'file' => $payload,
         ]);
 
-        //assert
+        // assert
         $response->assertOk();
         $response->assertJson([
             'message' => 'Uploading is in process and submitted successfully',
@@ -361,23 +395,23 @@ class ProductTest extends TestCase
         $expectedProduct = [
             [
                 'id' => 4450,
-                'quantity' => 13 - 2 + 1, //12
+                'quantity' => 13 - 2 + 1, // 12
             ],
             [
                 'id' => 4768,
-                'quantity' => 30 - 2 + 1, //29
+                'quantity' => 30 - 2 + 1, // 29
             ],
             [
                 'id' => 4451,
-                'quantity' => 20 + 2 - 2, //20
+                'quantity' => 20 + 2 - 2, // 20
             ],
             [
                 'id' => 4574,
-                'quantity' => 16 - 2 + 1, //15
+                'quantity' => 16 - 2 + 1, // 15
             ],
             [
                 'id' => 6039,
-                'quantity' => 18 + 4, //22
+                'quantity' => 18 + 4, // 22
             ],
         ];
 

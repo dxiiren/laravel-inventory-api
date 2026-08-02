@@ -71,7 +71,7 @@ One domain table plus Laravel's infrastructure tables:
 | Table | Notes |
 | --- | --- |
 | `products` | `id` (client-supplied, in `$fillable`), `type`, `brand`, `model`, `capacity`, `quantity`, timestamps |
-| `users` + `personal_access_tokens` | Sanctum scaffolding, unused by the product routes |
+| `users` + `personal_access_tokens` | Sanctum — `auth:sanctum` guards the product write routes, the import and `GET /api/user` |
 | `cache`, `jobs`, `sessions` | `CACHE_STORE` / `QUEUE_CONNECTION` / `SESSION_DRIVER` all = `database` |
 
 Note `id` is **not** auto-increment-only in practice: the seeder and importer treat it as an
@@ -83,7 +83,7 @@ import upserts on it.
 | Env | DB | Queue | Where defined |
 | --- | --- | --- | --- |
 | local | sqlite `database/database.sqlite` | `database` (needs `just queue`) | `.env` (written by `just bootstrap`; git-ignored) |
-| testing | sqlite `database/testing.sqlite` | `sync` (runs inline) | `phpunit.xml` + committed `.env.testing` |
+| testing | sqlite `:memory:` | `sync` (runs inline) | `phpunit.xml` (its `DB_DATABASE` overrides the committed `.env.testing`) |
 | reference | MySQL `xlsx_import_backend` | `database` | committed `.env.example` (+ `xlsx_import_backend.sql` dump) |
 
 ## Trust boundaries

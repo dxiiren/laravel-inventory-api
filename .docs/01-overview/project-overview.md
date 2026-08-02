@@ -55,8 +55,8 @@ import pipeline.
 ## What it is not
 
 - Not deployed anywhere; there is no production environment.
-- No login/registration flows — `User`, Sanctum and the `users` GraphQL query exist but
-  nothing issues tokens; `/api/products*` routes are unauthenticated.
+- No login/registration flows — writes are behind `auth:sanctum`, but nothing in the app
+  issues tokens; mint them by hand with `$user->createToken(...)`.
 - No product-creating import — the Excel pipeline only adjusts quantities of products that
   already exist (seed them first: `just fresh`).
 

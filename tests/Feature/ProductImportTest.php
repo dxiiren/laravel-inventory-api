@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Http\UploadedFile;
+use App\Models\User;
 use Database\Seeders\ProductSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Laravel\Sanctum\Sanctum;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class ProductImportTest extends TestCase
 {
@@ -16,13 +18,16 @@ class ProductImportTest extends TestCase
     /** @var string[] xlsx files generated during the test, removed in tearDown */
     private array $generatedFiles = [];
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         $this->seed(ProductSeeder::class);
+
+        // The import endpoint and its report are behind auth:sanctum.
+        Sanctum::actingAs(User::factory()->create());
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         foreach ($this->generatedFiles as $file) {
             @unlink($file);
@@ -56,7 +61,7 @@ class ProductImportTest extends TestCase
         $this->assertNotNull($importId, 'import response should expose the import record id');
         $this->assertDatabaseCount('imports', 1);
 
-        $report = $this->getJson('/api/imports/' . $importId);
+        $report = $this->getJson('/api/imports/'.$importId);
         $report->assertOk();
 
         $errors = $report->json('data.row_errors');
@@ -101,18 +106,18 @@ class ProductImportTest extends TestCase
     /**
      * Write a real xlsx with a product_id/status heading row plus the given data rows.
      *
-     * @param array<int, array{0: int|string, 1: string}> $rows
+     * @param  array<int, array{0: int|string, 1: string}>  $rows
      * @return string Absolute path of the generated file
      */
     private function makeXlsx(array $rows): string
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $spreadsheet->getActiveSheet()->fromArray([
             ['product_id', 'status'],
             ...$rows,
         ]);
 
-        $path = tempnam(sys_get_temp_dir(), 'product_import_') . '.xlsx';
+        $path = tempnam(sys_get_temp_dir(), 'product_import_').'.xlsx';
         (new XlsxWriter($spreadsheet))->save($path);
 
         $this->generatedFiles[] = $path;

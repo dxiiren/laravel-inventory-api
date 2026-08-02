@@ -43,7 +43,9 @@ class ProductController extends Controller
 
         return response()->json([
             'import_id' => $import->id,
-            'message' => 'Uploading is in process and submitted successfully',
+            'message' => $import->wasRecentlyCreated
+                ? 'Uploading is in process and submitted successfully'
+                : 'This file was already imported — duplicate upload ignored',
         ], 200);
     }
 }

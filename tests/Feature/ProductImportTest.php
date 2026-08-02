@@ -67,6 +67,37 @@ class ProductImportTest extends TestCase
         $this->assertStringContainsString('999999', $errors[0]['error']);
     }
 
+    public function test_reimporting_identical_file_does_not_change_stock()
+    {
+        // Prepare — one buy and one sold row against seeded products.
+        $path = $this->makeXlsx([
+            [4450, 'buy'],  // 13 + 1 = 14
+            [4451, 'sold'], // 20 - 1 = 19
+        ]);
+
+        $first = $this->postJson('/api/products/import', [
+            'file' => $this->uploadedXlsx($path),
+        ]);
+
+        $first->assertOk();
+        $this->assertDatabaseHas('products', ['id' => 4450, 'quantity' => 14]);
+        $this->assertDatabaseHas('products', ['id' => 4451, 'quantity' => 19]);
+
+        // Test — upload the exact same file again (same bytes, same hash).
+        $second = $this->postJson('/api/products/import', [
+            'file' => $this->uploadedXlsx($path),
+        ]);
+
+        // Assert — the re-upload is acknowledged but the nets are NOT applied twice.
+        $second->assertOk();
+        $this->assertDatabaseHas('products', ['id' => 4450, 'quantity' => 14]);
+        $this->assertDatabaseHas('products', ['id' => 4451, 'quantity' => 19]);
+
+        // The duplicate points at the original import record instead of creating a new run.
+        $this->assertDatabaseCount('imports', 1);
+        $this->assertSame($first->json('data.import_id'), $second->json('data.import_id'));
+    }
+
     /**
      * Write a real xlsx with a product_id/status heading row plus the given data rows.
      *

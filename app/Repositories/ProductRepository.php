@@ -44,10 +44,22 @@ class ProductRepository implements ProductRepositoryInterface
     public function import(ImportProductRequest $request): Import
     {
         $file = $request->file('file');
+        $fileHash = hash_file('sha256', $file->getRealPath());
+
+        // Idempotency: the file hash is the key. A file already imported (or still
+        // queued/processing) is acknowledged but NOT re-applied — only a failed run
+        // may be retried.
+        $existing = Import::where('file_hash', $fileHash)
+            ->where('status', '!=', ImportStatusEnum::FAILED)
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
 
         $import = Import::create([
             'file_name' => $file->getClientOriginalName(),
-            'file_hash' => hash_file('sha256', $file->getRealPath()),
+            'file_hash' => $fileHash,
             'status' => ImportStatusEnum::PENDING,
         ]);
 

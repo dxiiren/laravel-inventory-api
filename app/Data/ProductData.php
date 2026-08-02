@@ -15,8 +15,7 @@ class ProductData extends Data
         public string $model,
         public string $capacity,
         public int $quantity,
-    ) {
-    }
+    ) {}
 
     public static function fromModel(Product $product): self
     {

@@ -2,14 +2,14 @@
 
 namespace App\Imports;
 
-use App\Models\Product;
 use App\Enums\ProductStatusEnum;
+use App\Models\Product;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
-use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
-class ProductImport implements ToCollection, WithHeadingRow, WithChunkReading
+class ProductImport implements ToCollection, WithChunkReading, WithHeadingRow
 {
     /**
      * Spreadsheet row of the last processed data row. The heading occupies
@@ -30,13 +30,15 @@ class ProductImport implements ToCollection, WithHeadingRow, WithChunkReading
     {
         [$changes, $rowsByProduct] = $this->calculateNetChanges($rows);
 
-        if (empty($changes))
+        if (empty($changes)) {
             return;
+        }
 
         $upserts = $this->buildUpsertData($changes, $rowsByProduct);
 
-        if (empty($upserts))
+        if (empty($upserts)) {
             return;
+        }
 
         Product::upsert($upserts, ['id'], ['quantity']);
     }
@@ -55,8 +57,8 @@ class ProductImport implements ToCollection, WithHeadingRow, WithChunkReading
     /**
      * Build upsert data for the products.
      *
-     * @param array<int, int> $changes  Associative array of product_id => quantity change
-     * @param array<int, array<int, int>> $rowsByProduct  product_id => spreadsheet rows that referenced it
+     * @param  array<int, int>  $changes  Associative array of product_id => quantity change
+     * @param  array<int, array<int, int>>  $rowsByProduct  product_id => spreadsheet rows that referenced it
      * @return array<int, array{product_id: int, quantity: int}> $payload
      */
     private function buildUpsertData(array $changes, array $rowsByProduct): array
@@ -69,10 +71,11 @@ class ProductImport implements ToCollection, WithHeadingRow, WithChunkReading
 
         foreach ($changes as $productId => $netChange) {
 
-            if (!isset($existingProducts[$productId])) {
+            if (! isset($existingProducts[$productId])) {
                 foreach ($rowsByProduct[$productId] ?? [] as $row) {
                     $this->addRowError($row, $productId, "Unknown product_id {$productId} — row skipped");
                 }
+
                 continue;
             }
 
@@ -98,9 +101,8 @@ class ProductImport implements ToCollection, WithHeadingRow, WithChunkReading
     /**
      * Calculate net changes for each product based on the status.
      *
-     * @param Collection $rows
      * @return array{0: array<int, int>, 1: array<int, array<int, int>>}
-     *         Net change per product_id, plus the spreadsheet rows that referenced each product_id
+     *                                                                   Net change per product_id, plus the spreadsheet rows that referenced each product_id
      */
     private function calculateNetChanges(Collection $rows): array
     {
@@ -113,8 +115,9 @@ class ProductImport implements ToCollection, WithHeadingRow, WithChunkReading
             $productId = $row['product_id'] ?? null;
             $status = strtolower(trim($row['status'] ?? ''));
 
-            if (!$productId || !$status) {
+            if (! $productId || ! $status) {
                 $this->addRowError($currentRow, $productId, 'Row is missing product_id or status — row skipped');
+
                 continue;
             }
 
@@ -126,6 +129,7 @@ class ProductImport implements ToCollection, WithHeadingRow, WithChunkReading
 
             if ($delta === null) {
                 $this->addRowError($currentRow, $productId, "Invalid status '{$status}' — expected 'sold' or 'buy'");
+
                 continue;
             }
 

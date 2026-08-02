@@ -26,8 +26,8 @@ class ImportProductRequest extends FormRequest
                 'required',
                 'file',
                 'mimes:xlsx',
-                'max:5120' // optional: limit to 5MB
-            ]
+                'max:5120', // optional: limit to 5MB
+            ],
         ];
     }
 

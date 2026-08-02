@@ -2,13 +2,13 @@
 
 namespace App\Repositories;
 
-use App\Models\Import;
-use App\Models\Product;
+use App\Contracts\ProductRepositoryInterface;
 use App\Data\ProductData;
 use App\Enums\ImportStatusEnum;
-use App\Jobs\ImportProductsFromExcelJob;
 use App\Http\Requests\ImportProductRequest;
-use App\Contracts\ProductRepositoryInterface;
+use App\Jobs\ImportProductsFromExcelJob;
+use App\Models\Import;
+use App\Models\Product;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class ProductRepository implements ProductRepositoryInterface
@@ -33,6 +33,7 @@ class ProductRepository implements ProductRepositoryInterface
     public function update(Product $product, ProductData $data): Product
     {
         $product->update($data->toArray());
+
         return $product;
     }
 

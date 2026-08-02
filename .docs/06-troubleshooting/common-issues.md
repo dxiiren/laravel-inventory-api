@@ -28,7 +28,11 @@ curl.exe -s -X POST http://127.0.0.1:8105/api/graphql -H "Content-Type: applicat
 Working as designed: the endpoint only **queues** `ImportProductsFromExcelJob`
 (`QUEUE_CONNECTION=database`). Run a worker — `just queue` — and watch the job process.
 Also remember the import only adjusts **existing** product ids (seed first: `just fresh`)
-and skips a product whose net quantity would land exactly on 0.
+and skips a product whose net quantity would land exactly on 0. Check
+`GET /api/imports/{id}` (the `import_id` is in the upload response) — unknown ids and
+malformed rows are listed there per spreadsheet row. And if you re-uploaded the **same
+file**, that's the sha256 idempotency guard: duplicates are acknowledged but never
+re-applied.
 
 ## `just test` fails with `SQLiteDatabaseDoesNotExistException ... database/testing.sqlite`
 

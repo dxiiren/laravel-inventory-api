@@ -3,8 +3,13 @@
 A Laravel 12 product-inventory API: CRUD and search over a `products` table via REST
 **and** GraphQL (Lighthouse), plus a bulk Excel import — POST an `.xlsx` of
 `product_id`/`status` rows (`sold` = −1, `buy` = +1) and a queued job nets the changes
-per product and upserts the new stock quantities. Backend for the companion
-`upload-product-vue` frontend; the only page it serves itself is the stock welcome page.
+per product and upserts the new stock quantities. Every import run is recorded: row-level
+errors are reported at `GET /api/imports/{id}`, and re-uploading an identical file is
+ignored (sha256 idempotency key). Backend for the companion `upload-product-vue`
+frontend; the only page it serves itself is the stock welcome page.
+
+**Frontend:** the Vue UI half of this system lives at
+[dxiiren/upload-product-vue](https://github.com/dxiiren/upload-product-vue).
 
 > **New developer? Start with [`.docs/tldr.md`](.docs/tldr.md)** — every doc summarised on one
 > page. The full guide lives in [`.docs/`](.docs/README.md).
@@ -49,6 +54,113 @@ wrapped in the `{code, message, data, errors}` envelope. GraphQL lives at
 run `just queue` in a second terminal to actually process it. A sample upload file is at
 `database/seeders/product_status_list.xlsx`.
 
+## API examples
+
+### REST — search products
+
+```powershell
+curl.exe "http://127.0.0.1:8105/api/products?search=4450"
+```
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "current_page": 1,
+    "data": [
+      {
+        "id": 4450,
+        "type": "Smartphone",
+        "brand": "Apple",
+        "model": "iPhone SE",
+        "capacity": "2GB/16GB",
+        "quantity": 13,
+        "created_at": "2026-08-02T02:07:56.000000Z",
+        "updated_at": "2026-08-02T02:07:56.000000Z"
+      }
+    ],
+    "per_page": 10,
+    "total": 1
+  },
+  "errors": null
+}
+```
+
+(Pagination URLs elided — the `data` key holds the full Laravel paginator, so the rows sit
+at `data.data`.) `search` matches id, type, brand, model and capacity.
+
+### GraphQL — same search at `POST /api/graphql`
+
+```powershell
+curl.exe -X POST http://127.0.0.1:8105/api/graphql -H "Content-Type: application/json" -d '{\"query\":\"query SearchProducts($filter: ProductFilterInput) { products(filter: $filter) { paginatorInfo { total } data { id type brand model capacity quantity } } }\",\"variables\":{\"filter\":{\"search\":\"iPhone SE (2020)\"}}}'
+```
+
+```json
+{
+  "data": {
+    "products": {
+      "paginatorInfo": { "total": 1 },
+      "data": [
+        {
+          "id": 6039,
+          "type": "Smartphone",
+          "brand": "Apple",
+          "model": "iPhone SE (2020)",
+          "capacity": "3GB/64GB",
+          "quantity": 18
+        }
+      ]
+    }
+  }
+}
+```
+
+The GraphQL endpoint is `/api/graphql` (not `/graphql`), and `products(filter: {search})`
+reuses the same model scope as the REST `?search=` — both return the same result set.
+
+### Excel import + the import report
+
+```powershell
+curl.exe -F "file=@database/seeders/product_status_list.xlsx" http://127.0.0.1:8105/api/products/import
+# -> {"code":200,"message":"Uploading is in process and submitted successfully",
+#     "data":{"import_id":1, ...},"errors":null}
+```
+
+Each upload creates an **import record** (keyed by the file's sha256). Once the queue
+worker has processed the job, `GET /api/imports/{id}` returns the run's status and every
+malformed row — unknown product ids, missing columns, invalid statuses — with its actual
+spreadsheet row number:
+
+```powershell
+curl.exe "http://127.0.0.1:8105/api/imports/1"
+```
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "id": 1,
+    "file_name": "product_status_list.xlsx",
+    "file_hash": "54fbe933c5c6174f7f0ebc53ff21f839469f46e279123083cf3c4980f6493798",
+    "status": "completed",
+    "row_errors": [
+      { "row": 19, "product_id": 6040, "error": "Unknown product_id 6040 — row skipped" },
+      { "row": 20, "product_id": 6041, "error": "Unknown product_id 6041 — row skipped" }
+    ],
+    "created_at": "2026-08-02T02:08:35.000000Z",
+    "updated_at": "2026-08-02T02:08:37.000000Z"
+  },
+  "errors": null
+}
+```
+
+`status` walks `pending` → `processing` → `completed` (or `failed`). Re-uploading a
+byte-identical file is acknowledged with the **original** `import_id` and a
+"duplicate upload ignored" message — the quantity nets are never applied twice. Only a
+`failed` run may be retried.
+
 ## Commands
 
 Run `just` with no arguments to list every recipe. The ones you'll use daily:
@@ -78,7 +190,14 @@ then reload.
 
 That's the queue: the upload is stored and `ImportProductsFromExcelJob` is queued on the
 `database` connection. Run `just queue` to process it. Also note the import only adjusts
-quantities of **existing** product ids — unknown ids in the sheet are skipped silently.
+quantities of **existing** product ids — unknown ids in the sheet are skipped and recorded
+as row-level errors on the import report (`GET /api/imports/{id}`).
+
+### Re-uploading the same Excel file succeeds but changes nothing
+
+That's the idempotency guard: the file's sha256 matches an earlier import, so the upload is
+acknowledged with the original `import_id` and no job is dispatched. Change the file's
+content to import again; only a `failed` run may be retried with the same file.
 
 ### `could not find driver` or MySQL connection errors on artisan commands
 
@@ -101,17 +220,19 @@ upload-product-laravel-excel/
     Contracts/              # ProductRepositoryInterface
     Data/                   # ProductData (spatie/laravel-data DTO)
     Enums/                  # ProductStatusEnum (sold | buy)
-    Http/Controllers/       # ProductController (index/store/update/destroy/import)
+    Http/Controllers/       # ProductController (index/store/update/destroy/import),
+                            # ImportController (import report)
     Http/Middleware/        # ApiDataResponse ({code, message, data, errors} envelope)
     Http/Requests/          # ImportProductRequest (xlsx, <=5MB)
-    Imports/                # ProductImport (chunked, nets sold/buy, upserts quantity)
-    Jobs/                   # ImportProductsFromExcelJob (queued)
-    Models/                 # Product, User
-    Repositories/           # ProductRepository
+    Imports/                # ProductImport (chunked, nets sold/buy, upserts quantity,
+                            # records row-level errors)
+    Jobs/                   # ImportProductsFromExcelJob (queued; updates the import record)
+    Models/                 # Product, Import, User
+    Repositories/           # ProductRepository (incl. sha256 idempotency guard)
   database/                 # migrations, ProductFactory, ProductSeeder + sample xlsx
   graphql/                  # schema.graphql + product.graphql + user.graphql
-  routes/                   # api.php (products CRUD + import), web.php (welcome)
-  tests/                    # ProductTest, ProductGraphqlTest
+  routes/                   # api.php (products CRUD + import + import report), web.php (welcome)
+  tests/                    # ProductTest, ProductGraphqlTest, ProductImportTest
   xlsx_import_backend.sql   # MySQL dump matching .env.example defaults (optional)
   justfile, setup.ps1       # dev recipes + one-time machine setup
   .docs/                    # numbered documentation set

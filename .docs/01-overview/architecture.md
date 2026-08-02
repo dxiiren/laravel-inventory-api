@@ -12,19 +12,29 @@ POST /api/products/import
   routes/api.php                    (ApiDataResponse middleware group)
     → ImportProductRequest          validates: file required, mimes:xlsx, max:5120 KB
     → ProductController::import
-      → ProductRepository::import   stores upload under storage/app/private/products/
+      → ProductRepository::import   sha256 the upload; duplicate hash (non-failed) → return
+                                    the existing Import untouched, else create Import
+                                    (status: pending) + store upload under
+                                    storage/app/private/products/
         → dispatch(ImportProductsFromExcelJob)   ← queued (database connection, jobs table)
-    ← 200 {code, message: "Uploading is in process...", data: null}
+    ← 200 {code, message: "Uploading is in process..." | "duplicate upload ignored",
+           data: {import_id, ...}}
 
 (later, when a worker runs — `just queue`)
-ImportProductsFromExcelJob::handle
+ImportProductsFromExcelJob::handle   Import status → processing
   → Excel::import(new ProductImport, path, disk, XLSX)
     → ProductImport::collection      per chunk of 100 rows (WithChunkReading, WithHeadingRow)
-      → calculateNetChanges          product_id → Σ(sold = −1, buy = +1)
-      → buildUpsertData              fetch existing ids, add net change, skip unknown ids
-                                     and results that land exactly on 0
+      → calculateNetChanges          product_id → Σ(sold = −1, buy = +1); malformed rows →
+                                     row-level errors (spreadsheet row numbers, heading = 1)
+      → buildUpsertData              fetch existing ids, add net change; unknown ids →
+                                     row-level errors; skip results that land exactly on 0
       → Product::upsert(..., ['id'], ['quantity'])
   → Storage::delete(uploaded file)
+  → Import status → completed (failed on exception) + row_errors persisted
+
+GET /api/imports/{id}
+  → ImportController::show           the import report: file_name, file_hash, status,
+                                     row_errors [{row, product_id, error}]
 ```
 
 `GET /api/products` is the same pattern without the job: controller → repository →
@@ -79,7 +89,8 @@ import upserts on it.
 ## Trust boundaries
 
 - The import trusts sheet **content** shape (`product_id`, `status` heading row) but not its
-  values — unknown ids and unknown statuses are ignored, never created.
+  values — unknown ids and unknown statuses are never applied or created; each bad row is
+  recorded on the `Import` record and surfaced at `GET /api/imports/{id}`.
 - Upload abuse is bounded at the request edge: `mimes:xlsx` + 5 MB cap.
 - `/api/products` write routes have **no auth** — fine locally, a known gap for any real
   deployment (see [../04-deployment/deployment.md](../04-deployment/deployment.md)).

@@ -7,7 +7,8 @@ at `/api/products`, GraphQL at `/api/graphql`, and a bulk Excel import at
 `/api/products/import` that queues a job to net `sold`/`buy` rows per product and upsert
 stock quantities. Local-only, sqlite, port 8105. No auth on the product routes, no UI
 beyond the stock welcome page, and the import never creates products — it only adjusts
-existing ids.
+existing ids. Each run is recorded: row-level errors at `GET /api/imports/{id}`, and a
+byte-identical re-upload is ignored (sha256 idempotency key).
 
 ## [01-overview/architecture.md](01-overview/architecture.md)
 

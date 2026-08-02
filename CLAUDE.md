@@ -22,14 +22,14 @@ the sibling `upload-product-vue` repo.
 | Framework | **Laravel 12** (PHP ^8.2, local PHP 8.4) | API routes in `routes/api.php` under the `ApiDataResponse` envelope middleware; `routes/web.php` only serves the welcome page |
 | REST API | Resource controller + repository pattern | `ProductController` → `ProductRepositoryInterface` (bound in `AppServiceProvider`) → `ProductRepository`; DTOs via **spatie/laravel-data** (`ProductData`) |
 | GraphQL | **nuwave/lighthouse 6** at `POST /api/graphql` | Schema split across `graphql/*.graphql` (`#import`); `products`/`users` queries with `@paginate`, `@whereConditions`, `@orderBy`, `@scope(name: "filter")` |
-| Excel import | **maatwebsite/excel 3** (queued) | `POST /api/products/import` (`mimes:xlsx`, `max:5120` KB) stores the file, dispatches `ImportProductsFromExcelJob`; `ProductImport` reads chunks of 100, nets `sold`/`buy` per `product_id`, `upsert`s quantities — unknown ids are skipped |
+| Excel import | **maatwebsite/excel 3** (queued) | `POST /api/products/import` (`mimes:xlsx`, `max:5120` KB) stores the file, creates an `Import` record (sha256 hash = idempotency key; duplicates are acknowledged, not re-applied), dispatches `ImportProductsFromExcelJob`; `ProductImport` reads chunks of 100, nets `sold`/`buy` per `product_id`, `upsert`s quantities — unknown ids are skipped and recorded as row-level errors, reported at `GET /api/imports/{id}` |
 | Queue | `database` connection (`jobs` table) | Import only runs once a worker picks it up — `just queue` (foreground) |
 | ORM | Eloquent | `Product` (`$fillable` incl. `id`; `scopeFilter` searches id/type/brand/model/capacity), `User` (Sanctum) |
 | Database | **SQLite** locally (`database/database.sqlite`, git-ignored) | `just bootstrap` writes the local `.env` with `DB_CONNECTION=sqlite`; committed `.env.example` stays MySQL (`xlsx_import_backend`, dump at root `xlsx_import_backend.sql`) |
 | Validation | FormRequest + data DTO | `ImportProductRequest` (`file` required, `mimes:xlsx`, `max:5120`), `ProductData` (typed constructor promotion) |
 | API envelope | `ApiDataResponse` middleware | Wraps every JSON response as `{code, message, data, errors}` |
 | Assets | Vite 6 + Tailwind CSS 4 (npm) | Only the welcome page uses them; `just bootstrap` builds once |
-| Tests | PHPUnit 11 via `php artisan test` | `ProductTest` (REST + import dispatch), `ProductGraphqlTest`; test env = `phpunit.xml` + `.env.testing` (sqlite `database/testing.sqlite`, sync queue) |
+| Tests | PHPUnit 11 via `php artisan test` | `ProductTest` (REST + import dispatch), `ProductGraphqlTest` (incl. REST/GraphQL search parity), `ProductImportTest` (row-level error report + idempotency, real generated xlsx); test env = `phpunit.xml` + `.env.testing` (sqlite `database/testing.sqlite`, sync queue) |
 | Style | Laravel Pint | `just lint` / `just lint-fix` |
 | Task runner | `just` | wraps php/composer/npm (`justfile`); PHP pinned to `%LOCALAPPDATA%\Programs\php-8.4` |
 
@@ -40,23 +40,23 @@ upload-product-laravel-excel/
   app/
     Contracts/              # ProductRepositoryInterface
     Data/                   # ProductData (spatie/laravel-data DTO)
-    Enums/                  # ProductStatusEnum (sold | buy)
-    Http/Controllers/       # ProductController (index/store/update/destroy/import)
+    Enums/                  # ProductStatusEnum (sold | buy), ImportStatusEnum (pending → completed/failed)
+    Http/Controllers/       # ProductController (index/store/update/destroy/import), ImportController (show)
     Http/Middleware/        # ApiDataResponse ({code, message, data, errors} envelope)
     Http/Requests/          # ImportProductRequest (xlsx, <=5MB)
-    Imports/                # ProductImport (chunked, nets sold/buy, upserts quantity)
-    Jobs/                   # ImportProductsFromExcelJob (queued; deletes file after import)
-    Models/                 # Product (scopeFilter), User
+    Imports/                # ProductImport (chunked, nets sold/buy, upserts quantity, records row errors)
+    Jobs/                   # ImportProductsFromExcelJob (queued; updates Import record, deletes file)
+    Models/                 # Product (scopeFilter), Import (file_hash, status, row_errors), User
     Providers/              # AppServiceProvider (repository binding)
     Repositories/           # ProductRepository
   bootstrap/, config/       # stock Laravel 12 config (cache/session/queue on database)
   database/
-    migrations/             # users/cache/jobs + personal_access_tokens + products
+    migrations/             # users/cache/jobs + personal_access_tokens + products + imports
     factories/, seeders/    # ProductFactory, ProductSeeder (5 iPhones) + sample xlsx
   graphql/                  # schema.graphql (+ product/user via #import)
   resources/                # welcome view + Vite inputs (app.css, app.js)
-  routes/                   # api.php (products CRUD + import), web.php (welcome)
-  tests/                    # ProductTest, ProductGraphqlTest + stock examples
+  routes/                   # api.php (products CRUD + import + GET imports/{id}), web.php (welcome)
+  tests/                    # ProductTest, ProductGraphqlTest, ProductImportTest + stock examples
   xlsx_import_backend.sql   # MySQL dump matching .env.example defaults (optional)
   justfile, setup.ps1       # dev recipes + one-time machine setup
   .docs/                    # numbered documentation set
@@ -87,8 +87,10 @@ upload-product-laravel-excel/
   changes in `products` until a worker runs — `just queue` in a second terminal. Without it
   the job sits in the `jobs` table forever.
 - The import **only updates quantities of existing product ids** — rows whose `product_id`
-  isn't already in `products` are silently skipped, and a product whose net quantity would
-  land on exactly 0 is left unchanged (see `ProductImport::buildUpsertData`).
+  isn't already in `products` are skipped and recorded as row-level errors on the `Import`
+  record (`GET /api/imports/{id}`), and a product whose net quantity would land on exactly
+  0 is left unchanged (see `ProductImport::buildUpsertData`). Re-uploading a byte-identical
+  file is a no-op: the sha256 `file_hash` is the idempotency key (only `failed` runs retry).
 - The local `.env` is sqlite; the committed `.env.example` is MySQL. Never "fix" `.env.example`,
   `config/database.php`, or committed migrations.
 - The companion `upload-product-vue` frontend expects this backend on port **8000** by

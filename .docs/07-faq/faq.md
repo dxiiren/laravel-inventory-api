@@ -15,15 +15,18 @@ and watch it import. Tests don't need it (`.env.testing`/`phpunit.xml` set `QUEU
 Each row needs a `product_id` and a `status` (`sold` or `buy` — heading row required). Per
 chunk of 100 rows it sums a net change per product (`sold` = −1, `buy` = +1), loads the
 matching existing products, and bulk-`upsert`s `quantity + net`. Rows with unknown ids or
-unknown statuses are ignored; a product whose result would be exactly 0 is skipped. It never
-creates products — use `POST /api/products` (or the seeder) for that.
+unknown statuses are not applied — each is recorded as a row-level error (with its
+spreadsheet row number) on the run's `Import` record, readable at `GET /api/imports/{id}`;
+a product whose result would be exactly 0 is skipped. It never creates products — use
+`POST /api/products` (or the seeder) for that. Re-uploading a byte-identical file is a
+no-op: the sha256 hash is the idempotency key, so nets are never applied twice.
 
 ## Why is my response wrapped in `{code, message, data, errors}`?
 
 The `ApiDataResponse` middleware wraps every JSON response of the `/api/products*` group.
 Note the paginator therefore sits at `data.data` in list responses, and the import endpoint
-double-nests (`data: {data: null, message: ...}`) because the controller already returns its
-own envelope-shaped body.
+double-nests (`data: {import_id: ..., message: ...}`) because the controller already returns
+its own envelope-shaped body.
 
 ## Where is the GraphQL endpoint and playground?
 

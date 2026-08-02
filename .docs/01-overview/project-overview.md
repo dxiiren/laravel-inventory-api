@@ -20,7 +20,8 @@ import pipeline.
 | Welcome page (stock Laravel 12) | `GET /` |
 | Product list — paginated (10/page), `?search=` across id/type/brand/model/capacity | `GET /api/products` |
 | Product create / update / delete (via `ProductData` DTO) | `POST/PUT/DELETE /api/products[/{id}]` |
-| Bulk Excel import — `.xlsx` upload (≤5 MB), queued processing | `POST /api/products/import` |
+| Bulk Excel import — `.xlsx` upload (≤5 MB), queued processing, sha256-idempotent | `POST /api/products/import` |
+| Import report — run status + row-level errors (unknown ids, bad statuses) | `GET /api/imports/{id}` |
 | GraphQL — `product`, `products`, `user`, `users` queries with pagination, `where`, `orderBy`, `filter` | `POST /api/graphql` |
 | Current authenticated user (Sanctum) | `GET /api/user` |
 
@@ -31,12 +32,18 @@ import pipeline.
   passes typed `ProductData` objects (spatie/laravel-data) instead of raw request arrays.
 - **Uniform response envelope** — the `ApiDataResponse` middleware wraps every JSON
   response of the `/api/products*` group as `{code, message, data, errors}`.
-- **Queued, chunked Excel import** — the upload is stored to `storage/app/private/products`
-  and `ImportProductsFromExcelJob` is dispatched on the `database` queue. `ProductImport`
-  reads the sheet in chunks of 100 (`WithChunkReading`), computes a **net change** per
-  `product_id` (`sold` = −1, `buy` = +1), then bulk-`upsert`s quantities. Unknown product
-  ids are skipped; a product whose new quantity would be exactly 0 is left unchanged. The
-  uploaded file is deleted after a successful import.
+- **Queued, chunked Excel import** — the upload is stored to `storage/app/private/products`,
+  an `Import` record is created (file name, sha256 hash, status lifecycle
+  `pending → processing → completed/failed`) and `ImportProductsFromExcelJob` is dispatched
+  on the `database` queue. `ProductImport` reads the sheet in chunks of 100
+  (`WithChunkReading`), computes a **net change** per `product_id` (`sold` = −1, `buy` = +1),
+  then bulk-`upsert`s quantities. Unknown product ids, missing columns and invalid statuses
+  are skipped **and recorded as row-level errors** (real spreadsheet row numbers) on the
+  `Import` record, readable at `GET /api/imports/{id}`; a product whose new quantity would
+  be exactly 0 is left unchanged. The uploaded file is deleted after a successful import.
+- **Idempotent re-imports** — the sha256 of the uploaded file is the idempotency key: a
+  byte-identical re-upload is acknowledged with the original `import_id` and never
+  dispatched again, so quantity nets can't double-apply. Only a `failed` run may retry.
 - **GraphQL mirrors the model, not the controller** — Lighthouse resolves `products`
   straight from Eloquent with `@paginate` / `@whereConditions` / `@orderBy`, and reuses the
   model's `scopeFilter` via `@scope(name: "filter")`. The schema is split across

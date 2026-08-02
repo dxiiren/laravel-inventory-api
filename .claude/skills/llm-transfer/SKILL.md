@@ -291,5 +291,5 @@ That's the shape of every handoff - scale each section up or down to fit the tas
 
 ## Evolution Log
 
-- Ported from book-review for upload-product-laravel-excel (Laravel 12). Personas, stack constraints,
+- Ported from book-review for laravel-inventory-api (Laravel 12). Personas, stack constraints,
   and the worked example adapted to the Laravel/PHP stack; Vercel references removed.

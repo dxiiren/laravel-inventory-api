@@ -1,9 +1,9 @@
-# CLAUDE.md — upload-product-laravel-excel
+# CLAUDE.md — laravel-inventory-api
 
 > Human-facing developer docs live in [`.docs/`](./.docs/README.md) — start at
 > [`.docs/tldr.md`](./.docs/tldr.md). Keep them in sync when changing behavior they document.
 
-## Project: Upload Product API
+## Project: Laravel Inventory API
 
 A Laravel 12 product-inventory API (no UI beyond the stock welcome page): CRUD and search
 over a `products` table via REST **and** GraphQL (Lighthouse), plus a bulk Excel import —
@@ -11,7 +11,7 @@ POST an `.xlsx` of `product_id`/`status` rows (`sold` = −1, `buy` = +1) and a 
 nets the changes per product and upserts the new stock quantities. Companion frontend:
 the sibling `upload-product-vue` repo.
 
-- **Repo:** GitHub — `github.com/dxiiren/upload-product-laravel-excel`
+- **Repo:** GitHub — `github.com/dxiiren/laravel-inventory-api`
 - **Runs locally only** — no CI/CD, no deployment target. `just start` serves on
   `http://127.0.0.1:8105`.
 
@@ -36,7 +36,7 @@ the sibling `upload-product-vue` repo.
 ### Project Structure
 
 ```
-upload-product-laravel-excel/
+laravel-inventory-api/
   app/
     Contracts/              # ProductRepositoryInterface
     Data/                   # ProductData (spatie/laravel-data DTO)

@@ -1,4 +1,4 @@
-# Project Memory — upload-product-laravel-excel
+# Project Memory — laravel-inventory-api
 
 Index of stored memories. One line per memory: `- [Title](file.md) — hook`.
 Each memory lives in its own `*.md` file next to this index (frontmatter: `name`,

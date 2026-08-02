@@ -150,6 +150,6 @@ Five pillars, distilled from a real overnight failure and its fix:
 
 ## Evolution Log
 
-- Ported from book-review for upload-product-laravel-excel (Laravel 12). Examples adapted to the
+- Ported from book-review for laravel-inventory-api (Laravel 12). Examples adapted to the
   Laravel/just stack (`just bootstrap`/`just test`, feature tests instead of coverage gates);
   Vercel-specific deployment probes replaced with this repo's local-only reality.

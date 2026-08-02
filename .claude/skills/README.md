@@ -1,4 +1,4 @@
-# Skills Catalog — `upload-product-laravel-excel`
+# Skills Catalog — `laravel-inventory-api`
 
 Project development skills for this Laravel 12 product-inventory API (REST + GraphQL, queued Excel import, SQLite locally; GitHub, local-only). Each lives in its own directory with a `SKILL.md`. **Follow the relevant skill before writing code.** Run `/audit-skills` to verify every skill here is registered and that `CLAUDE.md` references only existing skills.
 

@@ -1,6 +1,6 @@
-# Upload Product API — developer documentation
+# Laravel Inventory API — developer documentation
 
-Numbered, self-contained docs for the `upload-product-laravel-excel` repo.
+Numbered, self-contained docs for the `laravel-inventory-api` repo.
 
 > **New here? Start with [`tldr.md`](tldr.md)** — every document summarised in 30 seconds
 > each. Read the full doc only when its summary says it answers your question.

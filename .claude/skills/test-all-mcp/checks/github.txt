@@ -1,7 +1,7 @@
-Test the GitHub MCP server (repo / PR / issue on dxiiren/upload-product-laravel-excel).
+Test the GitHub MCP server (repo / PR / issue on dxiiren/laravel-inventory-api).
 
 Call `mcp__github__get_me` (returns the authenticated GitHub user).
-Optionally list repos or PRs for owner "dxiiren", repo "upload-product-laravel-excel".
+Optionally list repos or PRs for owner "dxiiren", repo "laravel-inventory-api".
 
 Reply with:
 1. Connected? — is the github MCP available? (yes/no)

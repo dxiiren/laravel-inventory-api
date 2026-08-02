@@ -1,4 +1,4 @@
-# Upload Product API
+# Laravel Inventory API
 
 A Laravel 12 product-inventory API: CRUD and search over a `products` table via REST
 **and** GraphQL (Lighthouse), plus a bulk Excel import — POST an `.xlsx` of
@@ -215,7 +215,7 @@ Another serve is lingering. `just stop` kills only this repo's `php.exe` process
 ## Project layout
 
 ```
-upload-product-laravel-excel/
+laravel-inventory-api/
   app/
     Contracts/              # ProductRepositoryInterface
     Data/                   # ProductData (spatie/laravel-data DTO)

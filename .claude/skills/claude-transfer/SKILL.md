@@ -185,5 +185,5 @@ Grounded in primary sources, adversarially fact-checked (deep-research run):
 
 ## Evolution Log
 
-- Ported from book-review for upload-product-laravel-excel (Laravel 12). Commands + freshness checks
+- Ported from book-review for laravel-inventory-api (Laravel 12). Commands + freshness checks
   adapted to the Laravel/just stack (`just start` on :8105, `just test`, migrate status).

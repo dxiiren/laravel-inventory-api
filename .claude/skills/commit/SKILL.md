@@ -139,6 +139,6 @@ scope: products, api, import, graphql, models, db, ui, config, test, build, docs
 
 ## Evolution Log
 
-- Ported from book-review for upload-product-laravel-excel (Laravel 12). Scope table remapped to
+- Ported from book-review for laravel-inventory-api (Laravel 12). Scope table remapped to
   Laravel paths; hook-failure handling removed (this repo has no pre-commit hooks); build
   artifacts list adapted (`vendor/`, `public/build/`, sqlite db).

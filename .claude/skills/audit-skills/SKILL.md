@@ -114,6 +114,6 @@ evolving it:
 
 ## Evolution Log
 
-- Ported from book-review for upload-product-laravel-excel (Laravel 12). `audit.py` copied
+- Ported from book-review for laravel-inventory-api (Laravel 12). `audit.py` copied
   verbatim (it is stack-agnostic); auto-fix guidance examples adapted to this repo's
   git-ignored config set (`.env`, `.mcp.json`, `settings.local.json`).

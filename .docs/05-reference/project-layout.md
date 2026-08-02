@@ -7,7 +7,7 @@
 ## Tree
 
 ```
-upload-product-laravel-excel/
+laravel-inventory-api/
   app/
     Contracts/
       ProductRepositoryInterface.php   # the seam ProductController codes against

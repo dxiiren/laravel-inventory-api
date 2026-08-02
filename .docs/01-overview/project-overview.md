@@ -1,6 +1,6 @@
 # Project overview
 
-> **TL;DR** Upload Product API is a Laravel 12 product-inventory backend: REST + GraphQL
+> **TL;DR** Laravel Inventory API is a Laravel 12 product-inventory backend: REST + GraphQL
 > endpoints over a `products` table, plus a queued bulk Excel import that nets `sold`/`buy`
 > rows per product and upserts the resulting stock quantities. It runs locally only, on
 > SQLite, at http://127.0.0.1:8105, and is the backend for the sibling `upload-product-vue`

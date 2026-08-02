@@ -7,7 +7,7 @@ model: opus
 # Create PR — Push branch, open a GitHub PR into `main`
 
 Open a GitHub pull request from the current feature branch into `main` on
-`github.com/dxiiren/upload-product-laravel-excel`.
+`github.com/dxiiren/laravel-inventory-api`.
 
 ## Trigger
 

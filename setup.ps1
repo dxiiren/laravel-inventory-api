@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 
-# Upload Product API Bootstrap Setup
+# Laravel Inventory API Bootstrap Setup
 #
 # Installs all required development tools for local development.
 # Works on a FRESH PC -- only prerequisites are PowerShell and winget.
@@ -50,7 +50,7 @@ function Add-UserPath($Dir) {
 }
 
 Write-Host ""
-Write-Host "Upload Product API Bootstrap Setup" -ForegroundColor Cyan
+Write-Host "Laravel Inventory API Bootstrap Setup" -ForegroundColor Cyan
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -226,7 +226,7 @@ if (Test-Path $phpExe) {
         Copy-Item $phpIniTemplate $phpIni
         $override = @"
 
-; --- upload-product-laravel-excel setup.ps1 overrides ---
+; --- laravel-inventory-api setup.ps1 overrides ---
 ; Only extensions bundled in the official windows.php.net zip are listed here.
 extension_dir = "ext"
 extension=curl

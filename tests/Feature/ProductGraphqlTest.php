@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Product;
+use Database\Seeders\ProductSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\URL;
@@ -379,6 +380,61 @@ class ProductGraphqlTest extends TestCase
 
         foreach ($data as $product) {
             $this->assertStringContainsString('Smart', $product['type']);
+        }
+    }
+
+    public function test_graphql_search_matches_rest_search()
+    {
+        // Prepare — the same seed for both endpoints: 5 seeded iPhones plus one
+        // laptop so each search term filters a real subset.
+        $this->seed(ProductSeeder::class);
+
+        Product::factory()->create([
+            'id' => 8888,
+            'type' => 'Laptop',
+            'brand' => 'Dell',
+            'model' => 'XPS 15',
+            'capacity' => '16GB/512GB',
+            'quantity' => 5,
+        ]);
+
+        $searchTerms = [
+            'iPhone', // model column — the 5 seeded phones
+            '2GB',    // capacity column — subset of the phones
+            '445',    // id column — 4450 + 4451
+            'Dell',   // brand column — the laptop only
+        ];
+
+        foreach ($searchTerms as $term) {
+            // REST result set
+            $rest = $this->getJson('/api/products?search=' . urlencode($term));
+            $rest->assertOk();
+            $restIds = collect($rest->json('data.data'))->pluck('id')->sort()->values()->all();
+
+            // GraphQL result set — same search via products(filter: { search: ... })
+            $graphql = $this->graphQL(
+                /** @lang GraphQL **/
+                '
+                query SearchProducts($filter: ProductFilterInput) {
+                    products(filter: $filter) {
+                        data {
+                            id
+                        }
+                    }
+                }
+                ',
+                [
+                    'filter' => [
+                        'search' => $term,
+                    ],
+                ]
+            );
+            $graphql->assertOk();
+            $graphqlIds = collect($graphql->json('data.products.data'))->pluck('id')->sort()->values()->all();
+
+            // Assert — both APIs agree on the exact result set for this term.
+            $this->assertNotEmpty($restIds, "REST search '{$term}' should match at least one product");
+            $this->assertSame($restIds, $graphqlIds, "GraphQL and REST disagree for search '{$term}'");
         }
     }
 }

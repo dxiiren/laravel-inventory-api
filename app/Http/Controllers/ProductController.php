@@ -39,10 +39,10 @@ class ProductController extends Controller
 
     public function import(ImportProductRequest $request): JsonResponse
     {
-        $this->productRepository->import($request);
+        $import = $this->productRepository->import($request);
 
         return response()->json([
-            'data' => null,
+            'import_id' => $import->id,
             'message' => 'Uploading is in process and submitted successfully',
         ], 200);
     }

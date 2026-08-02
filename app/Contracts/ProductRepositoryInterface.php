@@ -2,6 +2,7 @@
 
 namespace App\Contracts;
 
+use App\Models\Import;
 use App\Models\Product;
 use App\Data\ProductData;
 use App\Http\Requests\ImportProductRequest;
@@ -17,6 +18,6 @@ interface ProductRepositoryInterface
 
     public function delete(Product $product): void;
 
-    public function import(ImportProductRequest $request): void;
+    public function import(ImportProductRequest $request): Import;
 }
 

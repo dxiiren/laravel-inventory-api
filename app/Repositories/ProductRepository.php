@@ -2,8 +2,10 @@
 
 namespace App\Repositories;
 
+use App\Models\Import;
 use App\Models\Product;
 use App\Data\ProductData;
+use App\Enums\ImportStatusEnum;
 use App\Jobs\ImportProductsFromExcelJob;
 use App\Http\Requests\ImportProductRequest;
 use App\Contracts\ProductRepositoryInterface;
@@ -39,9 +41,19 @@ class ProductRepository implements ProductRepositoryInterface
         $product->delete();
     }
 
-    public function import(ImportProductRequest $request): void
+    public function import(ImportProductRequest $request): Import
     {
-        $path = $request->file('file')->store('products');
-        dispatch(new ImportProductsFromExcelJob($path));
+        $file = $request->file('file');
+
+        $import = Import::create([
+            'file_name' => $file->getClientOriginalName(),
+            'file_hash' => hash_file('sha256', $file->getRealPath()),
+            'status' => ImportStatusEnum::PENDING,
+        ]);
+
+        $path = $file->store('products');
+        dispatch(new ImportProductsFromExcelJob($path, $import->id));
+
+        return $import;
     }
 }
